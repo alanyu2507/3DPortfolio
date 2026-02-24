@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/3DPortfolio/',
+  base: '/PersonalPortfolioV2/',
   server: {
     port: 3000,
     open: true

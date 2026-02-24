@@ -1,0 +1,19 @@
+.folder {
+  height: 10%;
+  width: 95%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 2px;
+  position: relative;
+  pointer-events: auto;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(255, 255, 255, 0.5);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.folder:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+  width: 97%
+}

@@ -1,0 +1,35 @@
+.overlay-text {
+  background: rgba(0, 0, 0, 0);
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  line-height: 20px;
+  padding: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  z-index: 1000;
+  pointer-events: none;
+  
+}
+
+.overlay-text-line {
+  margin: 0;
+  padding: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.cursor {
+  animation: blink 1s infinite;
+  color: #00ff00;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}

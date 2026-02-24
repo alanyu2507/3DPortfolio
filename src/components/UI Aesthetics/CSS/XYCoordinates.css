@@ -1,0 +1,9 @@
+.XYCoordinate {
+    position: fixed;
+    top: 5vh;
+    right: 5vw;
+    z-index: 1000;
+    color: white;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+}

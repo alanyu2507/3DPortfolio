@@ -1,0 +1,73 @@
+.LeftPanel {
+    width: 80%;
+    height: 90%;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.0); /* fully opaque white */
+  
+}
+
+.LeftPanelTop {
+    height: 5%;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.LeftPanelTopLeft {
+    height: 100%;
+    width: 5%;
+}
+
+.LeftPanelTopCenter {
+    height: 100%;
+    width: 90%;
+}
+
+.LeftPanelTopRight {
+    height: 100%;
+    width: 5%;
+}
+
+.LeftPanelBottom {
+    height: 95%;
+    width: 100%;
+}
+
+.LeftPanel.invisible {
+    visibility: hidden;
+}
+
+.LeftPanel.invisible * {
+    visibility: hidden;
+}
+
+.LeftPanel.visible {
+    visibility: visible;
+    animation: expandFromCenter 0.2s ease-out forwards;
+}
+
+.LeftPanel.visible * {
+    visibility: hidden;
+    animation: showContent 0.1s ease-in forwards 0.05s;
+}
+
+@keyframes expandFromCenter {
+    0% {
+        transform: scaleY(0);
+        transform-origin: center;
+    }
+    100% {
+        transform: scaleY(1);
+        transform-origin: center;
+    }
+}
+
+@keyframes showContent {
+    0% {
+        visibility: hidden;
+    }
+    100% {
+        visibility: visible;
+    }
+}

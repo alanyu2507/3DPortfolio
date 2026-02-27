@@ -1,11 +1,4 @@
 import TestRoomCanvas from './components/TestRoom'
-import OuterBox from './components/OuterBox'
-import Crosshair from './components/UI Aesthetics/Crosshair'
-import XYCoordinates from './components/UI Aesthetics/XYCoordinates'
-import OuterBoxInnerThirds from './components/OuterBoxComponents/OuterBoxInnerThirds'
-import LeftPanel from './components/OuterBoxComponents/LeftPanel/LeftPanel'
-import RightPanel from './components/OuterBoxComponents/RightPanel/RightPanel'
-import Navbar from './components/Navbar'
 import HudOverlay from './components/HudOverlay'
 
 

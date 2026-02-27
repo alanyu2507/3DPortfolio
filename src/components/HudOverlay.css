@@ -201,7 +201,7 @@
   position: absolute;
   top: 64px;
   left: 12px;
-  width: 200px;
+  width: 260px;
   max-height: calc(100vh - 140px);
   display: flex;
   flex-direction: column;
@@ -298,6 +298,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: 6px;
 }
 
 .hudLeftPanel__rowStatus {
@@ -311,6 +312,168 @@
   letter-spacing: 0.1em;
   color: var(--hud-cyan);
   margin-left: 4px;
+}
+
+/* ========== PROJECT PANEL (interactive) ========== */
+.hudProjectPanel {
+  pointer-events: auto;
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  width: min(520px, calc(100vw - 320px));
+  min-width: 320px;
+  min-height: 260px;
+  max-height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hud-line);
+  background: rgba(0, 0, 0, 0.52);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.45), inset 0 0 1px var(--hud-line);
+}
+
+.hudProjectPanel__header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  padding-right: 40px;
+  border-bottom: 1px solid var(--hud-line);
+}
+
+.hudProjectPanel__closeBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hud-line);
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--hud-text);
+  text-transform: uppercase;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hudProjectPanel__closeBtn:hover {
+  border-color: var(--hud-red);
+  color: var(--hud-red);
+  background: rgba(255, 80, 80, 0.1);
+}
+
+.hudProjectPanel__closeBtn:focus-visible {
+  outline: 1px solid var(--hud-cyan);
+  outline-offset: 1px;
+}
+
+.hudProjectPanel__titleWrap {
+  min-width: 0;
+}
+
+.hudProjectPanel__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hud-cyan);
+  text-shadow: 0 0 6px rgba(70, 200, 255, 0.25);
+}
+
+.hudProjectPanel__subtitle {
+  margin-top: 3px;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  color: var(--hud-text);
+  opacity: 0.9;
+}
+
+.hudProjectPanel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--hud-line);
+}
+
+.hudProjectPanel__tab {
+  padding: 5px 10px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hud-text);
+  background: transparent;
+  border: 1px solid var(--hud-line);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.hudProjectPanel__tab:hover {
+  border-color: var(--hud-cyan);
+  color: var(--hud-cyan);
+  background: rgba(70, 200, 255, 0.07);
+}
+
+.hudProjectPanel__tab[aria-selected="true"] {
+  border-color: var(--hud-cyan);
+  color: var(--hud-cyan);
+  background: rgba(70, 200, 255, 0.16);
+}
+
+.hudProjectPanel__tab:focus-visible {
+  outline: 1px solid var(--hud-cyan);
+  outline-offset: 1px;
+}
+
+.hudProjectPanel__content {
+  padding: 12px;
+  overflow: auto;
+  flex: 1;
+}
+
+.hudProjectPanel__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hudProjectPanel__content::-webkit-scrollbar-thumb {
+  background: var(--hud-line);
+}
+
+.hudProjectPanel__contentBody {
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.hudProjectPanel__contentText {
+  margin: 0 0 10px;
+}
+
+.hudProjectPanel__videoWrap {
+  width: 100%;
+  margin-bottom: 10px;
+  border: 1px solid var(--hud-line);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.hudProjectPanel__videoFrame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+.hudProjectPanel__bulletList {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.hudProjectPanel__bulletList li {
+  margin-bottom: 6px;
 }
 
 /* ========== RIGHT MODULES ========== */
@@ -734,5 +897,15 @@
 
   .hudRightModules__missionBox {
     width: 140px;
+  }
+
+  .hudProjectPanel {
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 112px;
+    width: auto;
+    min-width: 0;
+    max-height: 40vh;
   }
 }

@@ -1,8 +1,7 @@
 import { useEffect, Suspense, useState, useRef, useContext } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, Html } from '@react-three/drei'
-import { EffectComposer, Bloom, wrapEffect } from '@react-three/postprocessing'
-import { Effect } from 'postprocessing'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { CameraContext } from '../Contexts/CameraContext'
 import { FileContext } from '../Contexts/FileContext'
@@ -17,7 +16,7 @@ function CameraController() {
   const { setHoveredObject, setIsZoomedIn } = useContext(CameraContext)
   const { setXCoordinate, setYCoordinate } = useContext(CameraContext)
   const { folderName, setZoomIn, setZoomOut } = useContext(FileContext)
-  const [, setZoomLevel] = useState(5) // Initial zoom level
+  const [, setZoomLevel] = useState<number>(5) // Initial zoom level
   const minZoom = 1 // Minimum zoom (closer)
   const maxZoom = 20 // Maximum zoom (further)
   const zoomSpeed = 0.2 // How fast zoom changes
@@ -82,8 +81,8 @@ function CameraController() {
       const x = (event.clientX / window.innerWidth) * 2 - 1
       const y = -(event.clientY / window.innerHeight) * 2 + 1
 
-      // Only update coordinates if folderName is not empty
-      if (folderName == "") {
+      // Only update coordinates while no folder is selected
+      if (folderName === "") {
         setXCoordinate(x)
         setYCoordinate(y)
         // Calculate cursor-based offsets
@@ -99,7 +98,7 @@ function CameraController() {
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault()
       const delta = event.deltaY > 0 ? zoomSpeed : -zoomSpeed
-      setZoomLevel(prev => {
+      setZoomLevel((prev) => {
         const newZoom = prev + delta
         return Math.max(minZoom, Math.min(maxZoom, newZoom))
       })
@@ -112,7 +111,7 @@ function CameraController() {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('wheel', handleWheel)
     }
-  }, [zoomSpeed, minZoom, maxZoom, folderName])
+  }, [zoomSpeed, minZoom, maxZoom, folderName, setXCoordinate, setYCoordinate])
 
   useFrame(() => {
     // Handle smooth zoom animation

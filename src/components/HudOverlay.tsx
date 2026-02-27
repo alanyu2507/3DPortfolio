@@ -21,40 +21,153 @@ import { CameraContext } from "../Contexts/CameraContext";
 
 export type HudMode = "SAT" | "POS" | "LAT";
 
-export interface HudUnit {
-  id: string;
-  name: string;
-  status?: string;
-}
-
 export interface HudOverlayProps {
   onSelectUnit?: (id: string) => void;
 }
 
-const DEFAULT_UNITS: HudUnit[] = [
-  { id: "01", name: "SGT. BARLOW", status: "ACTIVE" },
-  { id: "02", name: "LIZ HEDMAN", status: "STANDBY" },
-  { id: "03", name: "CPL. VANCE", status: "ACTIVE" },
-  { id: "04", name: "PVT. REYES", status: "STANDBY" },
-  { id: "05", name: "SGT. MOSS", status: "ACTIVE" },
-  { id: "06", name: "PVT. KIM", status: "STANDBY" },
-  { id: "07", name: "CPL. DEWITT", status: "ACTIVE" },
-  { id: "08", name: "PVT. NASH", status: "STANDBY" },
-  { id: "09", name: "SGT. HOLLOWAY", status: "ACTIVE" },
-  { id: "10", name: "PVT. COLE", status: "STANDBY" },
+interface ProjectTab {
+  id: string;
+  label: string;
+  content: string;
+  embedUrl?: string;
+  bulletPoints?: string[];
+}
+
+interface ProjectItem {
+  id: string;
+  name: string;
+  placeholderCode: string;
+  description: string;
+  tabs: ProjectTab[];
+}
+
+const PROJECTS: ProjectItem[] = [
+  {
+    id: "hexapod",
+    name: "Modular Hexapod",
+    placeholderCode: "PX-01",
+    description: "Inverse Kinematics, Embedded Systems, Controls",
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Modular Hexapod project overview:",
+        embedUrl: "https://www.youtube.com/embed/_bQvNhBsuP8",
+        bulletPoints: [
+          "INVERSE KINEMATICS IMPLEMENTATION FOR 3-DOF LEGS",
+          "CLOSED-LOOP FEEDBACK CONTROL FOR UNEVEN TERRAIN NAVIGATION AND SELF-BALANCING",
+          "50MS RESPONSE LATENCY FOR REAL-TIME CONTROL",
+          "MODULAR ATTACHMENT SYSTEM FOR DYNAMIC UTILITY INTEGRATION",
+          "OPTIMIZED MULTI-THREADING AND MEMORY ALLOCATION TO AVOID CPU INTERRUPTS",
+        ],
+      },
+      {
+        id: "architecture",
+        label: "Architecture",
+        content:
+          "Milestone placeholders: architecture review complete, prototype validation pending, deployment planning queued.",
+      },
+      {
+        id: "notes",
+        label: "Notes",
+        content:
+          "Notes placeholder: replace this with custom details, docs links, and engineering commentary for Aegis.",
+      },
+    ],
+  },
+  {
+    id: "quadruped",
+    name: "Quadruped",
+    placeholderCode: "PX-02",
+    description: "CAN, FreeRTOS, PicoSDK",
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Project Orion is a data and telemetry workspace for surfacing mission-critical trends in real time.",
+      },
+      {
+        id: "stack",
+        label: "Stack",
+        content:
+          "Stack placeholder: define service boundaries, integration points, and ownership for each subsystem.",
+      },
+      {
+        id: "risks",
+        label: "Risks",
+        content:
+          "Risk placeholder: identify unknowns, mitigation steps, and target response windows per issue.",
+      },
+    ],
+  },
+  {
+    id: "project-voyager",
+    name: "Project Voyager",
+    placeholderCode: "PX-03",
+    description: "Exploratory platform for long-range development initiatives.",
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Project Voyager tracks long-horizon research and translates exploratory work into build-ready initiatives.",
+      },
+      {
+        id: "roadmap",
+        label: "Roadmap",
+        content:
+          "Roadmap placeholder: phase planning, target release windows, and dependencies across teams.",
+      },
+      {
+        id: "assets",
+        label: "Assets",
+        content:
+          "Assets placeholder: link design references, technical specs, and implementation resources.",
+      },
+    ],
+  },
 ];
 
 export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
   const { hoveredObject } = useContext(CameraContext);
   const [activeMode, setActiveMode] = useState<HudMode>("SAT");
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>("01");
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [activeTabByProject, setActiveTabByProject] = useState<Record<string, string>>(
+    {}
+  );
 
   const isHovered = hoveredObject.includes("hover");
 
-  const handleUnitSelect = (id: string) => {
-    setSelectedUnitId(id);
-    onSelectUnit?.(id);
+  const handleProjectSelect = (projectId: string) => {
+    const project = PROJECTS.find((item) => item.id === projectId);
+    if (!project) return;
+
+    setSelectedProjectId(projectId);
+    setActiveTabByProject((prev) => ({
+      ...prev,
+      [projectId]: prev[projectId] ?? project.tabs[0].id,
+    }));
+    onSelectUnit?.(projectId);
   };
+
+  const handleTabSelect = (projectId: string, tabId: string) => {
+    setActiveTabByProject((prev) => ({
+      ...prev,
+      [projectId]: tabId,
+    }));
+  };
+
+  const closeProjectPanel = () => {
+    setSelectedProjectId(null);
+  };
+
+  const activeProject = PROJECTS.find((project) => project.id === selectedProjectId) ?? null;
+  const activeTabId = activeProject
+    ? activeTabByProject[activeProject.id] ?? activeProject.tabs[0].id
+    : null;
+  const activeTab = activeProject?.tabs.find((tab) => tab.id === activeTabId) ?? null;
 
   return (
     <div className="hudRoot" aria-label="Tactical surveillance HUD overlay">
@@ -119,46 +232,89 @@ export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
           {/* --- LEFT PANEL (interactive) --- */}
           <aside className="hudLeftPanel">
             <div className="hudLeftPanel__header">
-              <div className="hudLeftPanel__title">COMMAND UNIT: SILVERBACK</div>
-              <div className="hudLeftPanel__subtitle">PLATOON SQUAD TRACKER</div>
+              <div className="hudLeftPanel__title">PROJECTS</div>
+              <div className="hudLeftPanel__subtitle">SELECT A PROJECT TO OPEN PANEL</div>
             </div>
-            <div className="hudLeftPanel__roster" role="listbox" aria-label="Unit roster">
-              {DEFAULT_UNITS.map((unit) => (
+            <div className="hudLeftPanel__roster" role="listbox" aria-label="Projects list">
+              {PROJECTS.map((project) => (
                 <button
-                  key={unit.id}
+                  key={project.id}
                   type="button"
                   role="option"
-                  aria-selected={selectedUnitId === unit.id}
+                  aria-selected={selectedProjectId === project.id}
                   className="hudLeftPanel__row"
-                  onClick={() => handleUnitSelect(unit.id)}
+                  onClick={() => handleProjectSelect(project.id)}
                 >
-                  <span className="hudLeftPanel__rowId">{unit.id}</span>
-                  <span className="hudLeftPanel__rowName">{unit.name}</span>
-                  <span className="hudLeftPanel__rowStatus">{unit.status}</span>
-                  {selectedUnitId === unit.id && (
-                    <span className="hudLeftPanel__rowTag">ACTIVE</span>
+                  <span className="hudLeftPanel__rowId">{project.placeholderCode}</span>
+                  <span className="hudLeftPanel__rowName">{project.name}</span>
+                  <span className="hudLeftPanel__rowStatus">OPEN</span>
+                  {selectedProjectId === project.id && (
+                    <span className="hudLeftPanel__rowTag">ACTIVE PANEL</span>
                   )}
                 </button>
               ))}
             </div>
           </aside>
 
-          {/* --- RIGHT MODULES (non-interactive) --- */}
-          <div className="hudRightModules">
-            <div className="hudRightModules__missionBox">
-              <div className="hudRightModules__missionTitle">MISSION UPDATE</div>
-              <div className="hudRightModules__missionLine">AA 371.478 · AB 754.912</div>
-              <div className="hudRightModules__missionLine">SAT IN · LOCATION LOCK</div>
-              <div className="hudRightModules__missionLine">EAGLE EYE CAM · ONLINE</div>
-              <div className="hudRightModules__missionLine">DARYL SERVER: STATUS OK</div>
-            </div>
-            <div className="hudRightModules__warning">WARNING</div>
-            <div className="hudRightModules__tags">
-              <span className="hudRightModules__tag">01</span>
-              <span className="hudRightModules__tag">08</span>
-              <span className="hudRightModules__tag">33</span>
-            </div>
-          </div>
+          {activeProject && activeTab && (
+            <section className="hudProjectPanel" aria-label={`${activeProject.name} panel`}>
+              <div className="hudProjectPanel__header">
+                <button
+                  type="button"
+                  className="hudProjectPanel__closeBtn"
+                  onClick={closeProjectPanel}
+                  aria-label="Close project panel"
+                >
+                  x
+                </button>
+                <div className="hudProjectPanel__titleWrap">
+                  <div className="hudProjectPanel__title">{activeProject.name}</div>
+                  <div className="hudProjectPanel__subtitle">{activeProject.description}</div>
+                </div>
+              </div>
+
+              <div className="hudProjectPanel__tabs" role="tablist" aria-label="Project tabs">
+                {activeProject.tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTabId === tab.id}
+                    className="hudProjectPanel__tab"
+                    onClick={() => handleTabSelect(activeProject.id, tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="hudProjectPanel__content" role="tabpanel">
+                <div className="hudProjectPanel__contentBody">
+                  <p className="hudProjectPanel__contentText">{activeTab.content}</p>
+                  {activeTab.embedUrl && (
+                    <div className="hudProjectPanel__videoWrap">
+                      <iframe
+                        className="hudProjectPanel__videoFrame"
+                        src={activeTab.embedUrl}
+                        title={`${activeProject.name} overview video`}
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+                  {activeTab.bulletPoints && activeTab.bulletPoints.length > 0 && (
+                    <ul className="hudProjectPanel__bulletList">
+                      {activeTab.bulletPoints.map((point) => (
+                        <li key={point}>{point}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* --- BOTTOM LEFT (zoom / navigation) --- */}
           <div className="hudBottomLeft">

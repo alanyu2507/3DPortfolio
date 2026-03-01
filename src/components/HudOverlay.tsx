@@ -15,14 +15,21 @@
  *     );
  *   }
  */
-import { useState, useContext } from "react";
+import { useState, useContext, useMemo, useEffect } from "react";
 import "./HudOverlay.css";
 import { CameraContext } from "../Contexts/CameraContext";
 
-export type HudMode = "SAT" | "POS" | "LAT";
+export type HudMode = "WORKSHOP" | "LAB" | "BEDROOM";
 
 export interface HudOverlayProps {
+  activeMode: HudMode;
+  onModeChange: (mode: HudMode) => void;
   onSelectUnit?: (id: string) => void;
+  onProjectFocus?: (
+    target: { lookAt: [number, number, number]; zoomFov: number },
+    projectId: string
+  ) => void;
+  onProjectPanelClose?: () => void;
 }
 
 interface ProjectTab {
@@ -38,6 +45,10 @@ interface ProjectItem {
   name: string;
   placeholderCode: string;
   description: string;
+  focusTarget: {
+    lookAt: [number, number, number];
+    zoomFov: number;
+  };
   tabs: ProjectTab[];
 }
 
@@ -47,6 +58,10 @@ const PROJECTS: ProjectItem[] = [
     name: "Modular Hexapod",
     placeholderCode: "PX-01",
     description: "Inverse Kinematics, Embedded Systems, Controls",
+    focusTarget: {
+      lookAt: [0.83, 0.95, 4.1],
+      zoomFov: 20,
+    },
     tabs: [
       {
         id: "overview",
@@ -81,6 +96,10 @@ const PROJECTS: ProjectItem[] = [
     name: "Quadruped",
     placeholderCode: "PX-02",
     description: "CAN, FreeRTOS, PicoSDK",
+    focusTarget: {
+      lookAt: [-0.8, 0.9, 1.7],
+      zoomFov: 38,
+    },
     tabs: [
       {
         id: "overview",
@@ -89,24 +108,28 @@ const PROJECTS: ProjectItem[] = [
           "Project Orion is a data and telemetry workspace for surfacing mission-critical trends in real time.",
       },
       {
-        id: "stack",
-        label: "Stack",
+        id: "architecture",
+        label: "Architecture",
         content:
           "Stack placeholder: define service boundaries, integration points, and ownership for each subsystem.",
       },
       {
-        id: "risks",
-        label: "Risks",
+        id: "notes",
+        label: "Notes",
         content:
           "Risk placeholder: identify unknowns, mitigation steps, and target response windows per issue.",
       },
     ],
   },
   {
-    id: "project-voyager",
-    name: "Project Voyager",
+    id: "electric-motorcycle",
+    name: "Electric Motorcycle",
     placeholderCode: "PX-03",
-    description: "Exploratory platform for long-range development initiatives.",
+    description: "PCB Design, FreeRTOS",
+    focusTarget: {
+      lookAt: [0.5, 1.4, 2.4],
+      zoomFov: 35,
+    },
     tabs: [
       {
         id: "overview",
@@ -115,14 +138,8 @@ const PROJECTS: ProjectItem[] = [
           "Project Voyager tracks long-horizon research and translates exploratory work into build-ready initiatives.",
       },
       {
-        id: "roadmap",
-        label: "Roadmap",
-        content:
-          "Roadmap placeholder: phase planning, target release windows, and dependencies across teams.",
-      },
-      {
-        id: "assets",
-        label: "Assets",
+        id: "notes",
+        label: "Notes",
         content:
           "Assets placeholder: link design references, technical specs, and implementation resources.",
       },
@@ -130,18 +147,125 @@ const PROJECTS: ProjectItem[] = [
   },
 ];
 
-export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
+const LAB_PROJECTS: ProjectItem[] = [
+  {
+    id: "lab-automation",
+    name: "Lab Automation Cell",
+    placeholderCode: "LB-01",
+    description: "Sensor Fusion, Test Automation, QA Rigs",
+    focusTarget: {
+      lookAt: [-0.4, 1.1, 1.6],
+      zoomFov: 40,
+    },
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Automated validation station for repeatable hardware and software integration tests.",
+      },
+      {
+        id: "hardware",
+        label: "Hardware",
+        content:
+          "Placeholder hardware notes: fixture layout, instrumentation list, and power routing.",
+      },
+      {
+        id: "results",
+        label: "Results",
+        content:
+          "Placeholder metrics: pass/fail trendline, mean cycle time, and anomaly counts.",
+      },
+    ],
+  },
+  {
+    id: "sterile-vision",
+    name: "Sterile Vision Suite",
+    placeholderCode: "LB-02",
+    description: "Computer Vision, Data Pipelines, Monitoring",
+    focusTarget: {
+      lookAt: [1.2, 1.0, 0.6],
+      zoomFov: 36,
+    },
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Real-time visual inspection pipeline for identifying setup drift and procedural variance.",
+      },
+      {
+        id: "pipeline",
+        label: "Pipeline",
+        content:
+          "Placeholder pipeline notes: capture stage, preprocessing stage, and inference stage.",
+      },
+      {
+        id: "notes",
+        label: "Notes",
+        content:
+          "Placeholder notes: model versioning plan, retraining cadence, and quality controls.",
+      },
+    ],
+  },
+  {
+    id: "ops-dashboard",
+    name: "Ops Dashboard",
+    placeholderCode: "LB-03",
+    description: "Telemetry, Alerting, SOP Integration",
+    focusTarget: {
+      lookAt: [0.3, 1.3, -0.3],
+      zoomFov: 34,
+    },
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Unified operations board for tracking lab throughput, alerts, and readiness in one view.",
+      },
+      {
+        id: "alerts",
+        label: "Alerts",
+        content:
+          "Placeholder alerts section: escalation matrix, thresholds, and notification channels.",
+      },
+      {
+        id: "runbook",
+        label: "Runbook",
+        content:
+          "Placeholder runbook: startup checklist, fault response procedure, and shutdown sequence.",
+      },
+    ],
+  },
+];
+
+export default function HudOverlay({
+  activeMode,
+  onModeChange,
+  onSelectUnit,
+  onProjectFocus,
+  onProjectPanelClose,
+}: HudOverlayProps) {
   const { hoveredObject } = useContext(CameraContext);
-  const [activeMode, setActiveMode] = useState<HudMode>("SAT");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activeTabByProject, setActiveTabByProject] = useState<Record<string, string>>(
     {}
   );
+  const activeProjects = useMemo(
+    () => (activeMode === "LAB" ? LAB_PROJECTS : PROJECTS),
+    [activeMode]
+  );
 
   const isHovered = hoveredObject.includes("hover");
 
+  useEffect(() => {
+    setSelectedProjectId(null);
+    onProjectPanelClose?.();
+  }, [activeMode]);
+
   const handleProjectSelect = (projectId: string) => {
-    const project = PROJECTS.find((item) => item.id === projectId);
+    const project = activeProjects.find((item) => item.id === projectId);
     if (!project) return;
 
     setSelectedProjectId(projectId);
@@ -149,6 +273,7 @@ export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
       ...prev,
       [projectId]: prev[projectId] ?? project.tabs[0].id,
     }));
+    onProjectFocus?.(project.focusTarget, projectId);
     onSelectUnit?.(projectId);
   };
 
@@ -161,9 +286,10 @@ export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
 
   const closeProjectPanel = () => {
     setSelectedProjectId(null);
+    onProjectPanelClose?.();
   };
 
-  const activeProject = PROJECTS.find((project) => project.id === selectedProjectId) ?? null;
+  const activeProject = activeProjects.find((project) => project.id === selectedProjectId) ?? null;
   const activeTabId = activeProject
     ? activeTabByProject[activeProject.id] ?? activeProject.tabs[0].id
     : null;
@@ -198,26 +324,26 @@ export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
                 <button
                   type="button"
                   className="hudTopButtons__btn"
-                  aria-pressed={activeMode === "SAT"}
-                  onClick={() => setActiveMode("SAT")}
+                  aria-pressed={activeMode === "WORKSHOP"}
+                  onClick={() => onModeChange("WORKSHOP")}
                 >
-                  SAT
+                  WORKSHOP
                 </button>
                 <button
                   type="button"
                   className="hudTopButtons__btn"
-                  aria-pressed={activeMode === "POS"}
-                  onClick={() => setActiveMode("POS")}
+                  aria-pressed={activeMode === "LAB"}
+                  onClick={() => onModeChange("LAB")}
                 >
-                  POS
+                  LAB
                 </button>
                 <button
                   type="button"
                   className="hudTopButtons__btn"
-                  aria-pressed={activeMode === "LAT"}
-                  onClick={() => setActiveMode("LAT")}
+                  aria-pressed={activeMode === "BEDROOM"}
+                  onClick={() => onModeChange("BEDROOM")}
                 >
-                  LAT
+                  BEDROOM
                 </button>
               </div>
             </div>
@@ -236,7 +362,7 @@ export default function HudOverlay({ onSelectUnit }: HudOverlayProps) {
               <div className="hudLeftPanel__subtitle">SELECT A PROJECT TO OPEN PANEL</div>
             </div>
             <div className="hudLeftPanel__roster" role="listbox" aria-label="Projects list">
-              {PROJECTS.map((project) => (
+              {activeProjects.map((project) => (
                 <button
                   key={project.id}
                   type="button"

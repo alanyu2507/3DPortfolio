@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useTexture, Html, useAnimations, useProgress } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
-import { DRACOLoader } from 'three-stdlib'
+import { DRACOLoader, SkeletonUtils } from 'three-stdlib'
 import { CameraContext } from '../Contexts/CameraContext'
 import { FileContext } from '../Contexts/FileContext'
 
@@ -98,7 +98,10 @@ function AnimatedModel({
   const { scene, animations } = useGLTF(modelPath, true, true, (loader) => {
     loader.setDRACOLoader(dracoLoader)
   })
-  const { actions } = useAnimations(animations, scene)
+  // Clone cached GLTF scenes so workshop-only animated models remount cleanly
+  // after switching room variants.
+  const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene])
+  const { actions } = useAnimations(animations, clonedScene)
 
   useEffect(() => {
     Object.values(actions).forEach((action) => {
@@ -121,7 +124,7 @@ function AnimatedModel({
     })
   }, [playNonce, actions])
 
-  return <primitive object={scene} />
+  return <primitive object={clonedScene} dispose={null} />
 }
 
 interface ProjectFocusTarget {

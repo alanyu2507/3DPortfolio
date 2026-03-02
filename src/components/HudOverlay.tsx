@@ -15,7 +15,7 @@
  *     );
  *   }
  */
-import { useState, useContext, useMemo, useEffect } from "react";
+import { useState, useContext, useMemo, useEffect, type CSSProperties } from "react";
 import "./HudOverlay.css";
 import { CameraContext } from "../Contexts/CameraContext";
 
@@ -56,6 +56,62 @@ interface ProjectItem {
   };
   tabs: ProjectTab[];
 }
+
+const CODE_STREAM_MAX_LINES = 7;
+const CODE_PULSE_BOX_COUNT = 7;
+
+const CODE_IDENTIFIERS = [
+  "nodeMap",
+  "signalCache",
+  "hudState",
+  "renderQueue",
+  "packetStore",
+  "frameDelta",
+  "cursorAxis",
+  "telemetryBus",
+];
+
+const CODE_TYPES = ["number", "string", "boolean", "Record<string, number>", "unknown[]"];
+
+const CODE_ACTIONS = [
+  "queueFrame",
+  "hydratePanel",
+  "syncTelemetry",
+  "parsePayload",
+  "flushBuffer",
+  "stabilizeClock",
+  "rebuildRoute",
+];
+
+const randomIndex = (max: number) => Math.floor(Math.random() * max);
+
+const randomFrom = <T,>(items: T[]) => items[randomIndex(items.length)];
+
+const randomCodeLine = () => {
+  const indent = "\t".repeat(Math.floor(Math.random() * 3) + 1);
+  const lineTypes = [
+    () =>
+      `const ${randomFrom(CODE_IDENTIFIERS)}: ${randomFrom(CODE_TYPES)} = ${Math.floor(
+        Math.random() * 900 + 100
+      )};`,
+    () =>
+      `if (${randomFrom(CODE_IDENTIFIERS)} && ${Math.random() < 0.5 ? "isReady" : "hasSignal"}) { ${randomFrom(
+        CODE_ACTIONS
+      )}(); }`,
+    () =>
+      `for (let i = 0; i < ${Math.floor(Math.random() * 6 + 3)}; i += 1) { ${randomFrom(
+        CODE_IDENTIFIERS
+      )}.push(i); }`,
+    () =>
+      `type ${Math.random() < 0.5 ? "TelemetryPacket" : "HudFrame"} = { id: string; ts: number; ok: boolean };`,
+    () =>
+      `await ${randomFrom(CODE_ACTIONS)}(${Math.random() < 0.5 ? "payload" : "context"});`,
+    () =>
+      `${randomFrom(CODE_IDENTIFIERS)} = ${randomFrom(CODE_IDENTIFIERS)}.filter((item) => item !== null);`,
+  ];
+
+  return `${indent}${lineTypes[randomIndex(lineTypes.length)]()}`;
+};
 
 const PROJECTS: ProjectItem[] = [
   {
@@ -285,10 +341,42 @@ export default function HudOverlay({
   onProjectPanelClose,
   isTransitionLoading = false,
 }: HudOverlayProps) {
+  const CURSOR_RING_RADIUS = 34;
+  const CURSOR_RING_CIRCUMFERENCE = 2 * Math.PI * CURSOR_RING_RADIUS;
+  const CURSOR_BLINK_BOX_COUNT = 60;
+  const CURSOR_BLINK_MAX_ACTIVE = 15;
+  const CODE_TYPE_SPEED_MIN_MS = 1;
+  const CODE_TYPE_SPEED_MAX_MS = 3;
+  const CODE_LINE_ADVANCE_DELAY_MS = 20;
   const { hoveredObject } = useContext(CameraContext);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activeTabByProject, setActiveTabByProject] = useState<Record<string, string>>(
     {}
+  );
+  const [cursorPercent, setCursorPercent] = useState({ x: 50, y: 50 });
+  const [blinkCells, setBlinkCells] = useState<
+    { isOn: boolean; color: string; opacity: number; fadeMs: number; nextToggleAt: number }[]
+  >(() =>
+    Array.from({ length: CURSOR_BLINK_BOX_COUNT }, () => ({
+      isOn: false,
+      color: "rgba(70, 200, 255, 1)",
+      opacity: 0,
+      fadeMs: 1400,
+      nextToggleAt: 0,
+    }))
+  );
+  const [codeLogLines, setCodeLogLines] = useState<string[]>([]);
+  const [codeTypingLine, setCodeTypingLine] = useState("");
+  const [codeTargetLine, setCodeTargetLine] = useState(() => randomCodeLine());
+  const [codePulseBoxes, setCodePulseBoxes] = useState<
+    { isOn: boolean; opacity: number; fadeMs: number; nextToggleAt: number }[]
+  >(() =>
+    Array.from({ length: CODE_PULSE_BOX_COUNT }, () => ({
+      isOn: false,
+      opacity: 0,
+      fadeMs: 900,
+      nextToggleAt: 0,
+    }))
   );
   const activeProjects = useMemo(
     () => (activeMode === "LAB" ? LAB_PROJECTS : PROJECTS),
@@ -301,6 +389,143 @@ export default function HudOverlay({
     setSelectedProjectId(null);
     onProjectPanelClose?.();
   }, [activeMode]);
+
+  useEffect(() => {
+    const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+    const handlePointerMove = (event: MouseEvent) => {
+      const width = Math.max(window.innerWidth, 1);
+      const height = Math.max(window.innerHeight, 1);
+      const x = clampPercent((event.clientX / width) * 100);
+      const y = clampPercent((event.clientY / height) * 100);
+      setCursorPercent({ x: Math.round(x), y: Math.round(y) });
+    };
+
+    window.addEventListener("mousemove", handlePointerMove);
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+    };
+  }, []);
+
+  useEffect(() => {
+    const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
+
+    if (codeTypingLine.length < codeTargetLine.length) {
+      const timeoutId = window.setTimeout(() => {
+        setCodeTypingLine(codeTargetLine.slice(0, codeTypingLine.length + 1));
+      }, Math.round(randomBetween(CODE_TYPE_SPEED_MIN_MS, CODE_TYPE_SPEED_MAX_MS)));
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCodeLogLines((prev) => [...prev, codeTargetLine].slice(-CODE_STREAM_MAX_LINES));
+      setCodeTypingLine("");
+      setCodeTargetLine(randomCodeLine());
+    }, CODE_LINE_ADVANCE_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [codeTargetLine, codeTypingLine]);
+
+  useEffect(() => {
+    const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
+    const now = Date.now();
+
+    setCodePulseBoxes((prev) =>
+      prev.map((box) => ({
+        ...box,
+        nextToggleAt: now + randomBetween(120, 1600),
+        fadeMs: Math.round(randomBetween(420, 1600)),
+      }))
+    );
+
+    const intervalId = window.setInterval(() => {
+      const tickNow = Date.now();
+
+      setCodePulseBoxes((prev) =>
+        prev.map((box) => {
+          if (tickNow < box.nextToggleAt) return box;
+
+          const turnOn = !box.isOn && Math.random() > 0.35;
+          return {
+            ...box,
+            isOn: turnOn,
+            opacity: turnOn ? Number(randomBetween(0.25, 0.95).toFixed(2)) : 0,
+            fadeMs: Math.round(randomBetween(380, 1500)),
+            nextToggleAt: tickNow + randomBetween(180, 1300),
+          };
+        })
+      );
+    }, 140);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
+    const now = Date.now();
+    setBlinkCells((prev) =>
+      prev.map((cell) => ({
+        ...cell,
+        nextToggleAt: now + randomBetween(100, 2600),
+        fadeMs: Math.round(randomBetween(900, 2200)),
+      }))
+    );
+
+    const intervalId = window.setInterval(() => {
+      const tickNow = Date.now();
+      setBlinkCells((prev) => {
+        let activeCount = prev.reduce((count, cell) => count + (cell.isOn ? 1 : 0), 0);
+        return prev.map((cell) => {
+          if (tickNow < cell.nextToggleAt) return cell;
+
+          if (cell.isOn) {
+            activeCount = Math.max(0, activeCount - 1);
+            return {
+              ...cell,
+              isOn: false,
+              opacity: 0,
+              fadeMs: Math.round(randomBetween(1100, 2600)),
+              nextToggleAt: tickNow + randomBetween(500, 2500),
+            };
+          }
+
+          if (activeCount >= CURSOR_BLINK_MAX_ACTIVE) {
+            return {
+              ...cell,
+              nextToggleAt: tickNow + randomBetween(250, 1200),
+            };
+          }
+
+          if (Math.random() < 0.5) {
+            activeCount += 1;
+            return {
+              ...cell,
+              isOn: true,
+              color: Math.random() < 0.5 ? "rgba(70, 200, 255, 1)" : "rgba(255, 255, 255, 1)",
+              opacity: Number(randomBetween(0.3, 0.95).toFixed(2)),
+              fadeMs: Math.round(randomBetween(1200, 2800)),
+              nextToggleAt: tickNow + randomBetween(1200, 3400),
+            };
+          }
+
+          return {
+            ...cell,
+            nextToggleAt: tickNow + randomBetween(350, 1600),
+          };
+        });
+      });
+    }, 180);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const handleProjectSelect = (projectId: string) => {
     const project = activeProjects.find((item) => item.id === projectId);
@@ -480,43 +705,91 @@ export default function HudOverlay({
             </section>
           )}
 
-          {/* --- BOTTOM LEFT (zoom / navigation) --- */}
+          {/* --- BOTTOM LEFT (cursor axis indicators) --- */}
           <div className="hudBottomLeft">
-            <div className="hudBottomLeft__title">ZOOM / NAVIGATION</div>
-            <div className="hudBottomLeft__zoomRow">
-              <span className="hudBottomLeft__zoomPct">20%</span>
-              <div className="hudBottomLeft__zoomBtns">
-                <span className="hudBottomLeft__zoomBtn">+</span>
-                <span className="hudBottomLeft__zoomBtn">−</span>
-              </div>
+            <div className="hudBottomLeft__title">CURSOR AXIS</div>
+            <div className="hudBottomLeft__circles">
+              {[
+                { id: "x", label: "X", value: cursorPercent.x },
+                { id: "y", label: "Y", value: cursorPercent.y },
+              ].map((axis) => (
+                <div
+                  key={axis.id}
+                  className="hudBottomLeft__circleCard"
+                  aria-label={`${axis.label} axis ${axis.value}`}
+                >
+                  <div className="hudBottomLeft__circleWrap">
+                    <svg className="hudBottomLeft__circleSvg" viewBox="0 0 88 88" aria-hidden="true">
+                      <circle className="hudBottomLeft__circleTrack" cx="44" cy="44" r={CURSOR_RING_RADIUS} />
+                      <circle
+                        className="hudBottomLeft__circleProgress"
+                        cx="44"
+                        cy="44"
+                        r={CURSOR_RING_RADIUS}
+                        strokeDasharray={CURSOR_RING_CIRCUMFERENCE}
+                        strokeDashoffset={CURSOR_RING_CIRCUMFERENCE * (1 - axis.value / 100)}
+                      />
+                    </svg>
+                    <span className="hudBottomLeft__circleValue">{axis.value}</span>
+                  </div>
+                  <span className="hudBottomLeft__circleAxis">{axis.label}</span>
+                </div>
+              ))}
             </div>
-            <div className="hudBottomLeft__dpad">
-              <span className="hudBottomLeft__dpadArrow" />
-              <span className="hudBottomLeft__dpadArrow hudBottomLeft__dpadArrow--down" />
-              <span className="hudBottomLeft__dpadArrow hudBottomLeft__dpadArrow--left" />
-              <span className="hudBottomLeft__dpadArrow hudBottomLeft__dpadArrow--right" />
-            </div>
-            <div className="hudBottomLeft__ruler">
-              <span className="hudBottomLeft__rulerLine" />
-              <span className="hudBottomLeft__rulerLine" />
-              <span className="hudBottomLeft__rulerLine" />
-              <span className="hudBottomLeft__rulerLine" />
-              <div className="hudBottomLeft__rulerLabel">MILES</div>
+            <div className="hudBottomLeft__blinkGrid" aria-hidden="true">
+              {blinkCells.map((cell, index) => (
+                <span
+                  key={`blink-${index}`}
+                  className={`hudBottomLeft__blinkCell${cell.isOn ? " hudBottomLeft__blinkCell--on" : ""}`}
+                  style={
+                    {
+                      "--blink-opacity": cell.opacity,
+                      "--blink-color": cell.color,
+                      "--blink-fade-ms": `${cell.fadeMs}ms`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
             </div>
           </div>
 
-          {/* --- BOTTOM RIGHT (camfeed placeholder) --- */}
+          {/*
+          --- BOTTOM RIGHT (code stream) ---
           <div className="hudBottomRight">
             <span className="hudBottomRight__corner hudBottomRight__corner--tl" aria-hidden="true" />
             <span className="hudBottomRight__corner hudBottomRight__corner--tr" aria-hidden="true" />
             <span className="hudBottomRight__corner hudBottomRight__corner--bl" aria-hidden="true" />
             <span className="hudBottomRight__corner hudBottomRight__corner--br" aria-hidden="true" />
-            <div className="hudBottomRight__title">02 CAMFEED: LEAVE CHANNELS</div>
-            <div className="hudBottomRight__feed">
-              <span className="hudBottomRight__caption">VITAL 5</span>
-              <span className="hudBottomRight__captionRight">AUDIO WITH LOCATION</span>
+            <div className="hudBottomRight__title">DATA UPLOAD</div>
+            <div className="hudBottomRight__content">
+              <div className="hudBottomRight__codeBox" aria-hidden="true">
+                {codeLogLines.map((line, index) => (
+                  <div key={`code-line-${index}-${line}`} className="hudBottomRight__codeLine">
+                    {line}
+                  </div>
+                ))}
+                <div className="hudBottomRight__codeLine hudBottomRight__codeLine--typing">
+                  {codeTypingLine}
+                  <span className="hudBottomRight__caret" />
+                </div>
+              </div>
+              <div className="hudBottomRight__pulseColumn" aria-hidden="true">
+                {codePulseBoxes.map((box, index) => (
+                  <span
+                    key={`pulse-box-${index}`}
+                    className={`hudBottomRight__pulseBox${box.isOn ? " hudBottomRight__pulseBox--on" : ""}`}
+                    style={
+                      {
+                        "--pulse-opacity": box.opacity,
+                        "--pulse-fade-ms": `${box.fadeMs}ms`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </div>
             </div>
           </div>
+          */}
 
           {/* --- CENTER RETICLE (square corners only, same CSS/logic as Crosshair.tsx) --- */}
           <div className="hudCenterReticle">

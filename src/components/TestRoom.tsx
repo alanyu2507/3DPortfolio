@@ -1,13 +1,15 @@
 import { useEffect, Suspense, useState, useRef, useContext, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useGLTF, useTexture, Html } from '@react-three/drei'
+import { useGLTF, useTexture, Html, useAnimations, useProgress } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three-stdlib'
 import { CameraContext } from '../Contexts/CameraContext'
 import { FileContext } from '../Contexts/FileContext'
 
-function Model({ modelPath }: { modelPath: string }) {
+type ModelVariant = 'WORKSHOP' | 'BEDROOM'
+
+function Model({ modelPath, variant }: { modelPath: string; variant: ModelVariant }) {
   const dracoLoader = useMemo(() => {
     const loader = new DRACOLoader()
     loader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
@@ -20,8 +22,11 @@ function Model({ modelPath }: { modelPath: string }) {
   const miscTexture = useTexture(`${import.meta.env.BASE_URL}Textures/Misc.webp`)
   const projectsTexture = useTexture(`${import.meta.env.BASE_URL}Textures/Projects.webp`)
   const roomTexture = useTexture(`${import.meta.env.BASE_URL}Textures/Room.webp`)
+  const bedroomImportantTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomImportant.webp`)
+  const bedroomMainTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomMain.webp`)
+  const bedroomMiscTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomMisc.webp`)
 
-  const materialsByTag = useMemo(() => {
+  const texturesByTag = useMemo(() => {
     const prepareTexture = (texture: THREE.Texture) => {
       texture.colorSpace = THREE.SRGBColorSpace
       texture.flipY = false
@@ -32,31 +37,91 @@ function Model({ modelPath }: { modelPath: string }) {
     prepareTexture(miscTexture)
     prepareTexture(projectsTexture)
     prepareTexture(roomTexture)
+    prepareTexture(bedroomImportantTexture)
+    prepareTexture(bedroomMainTexture)
+    prepareTexture(bedroomMiscTexture)
+
+    if (variant === 'BEDROOM') {
+      return {
+        _BedroomImportant: bedroomImportantTexture,
+        _BedroomMain: bedroomMainTexture,
+        _BedroomMisc: bedroomMiscTexture,
+      }
+    }
 
     return {
-      _Bike: new THREE.MeshStandardMaterial({ map: bikeTexture }),
-      _Misc: new THREE.MeshStandardMaterial({ map: miscTexture }),
-      _Projects: new THREE.MeshStandardMaterial({ map: projectsTexture }),
-      _Room: new THREE.MeshStandardMaterial({ map: roomTexture }),
+      _Bike: bikeTexture,
+      _Misc: miscTexture,
+      _Projects: projectsTexture,
+      _Room: roomTexture,
     }
-  }, [bikeTexture, miscTexture, projectsTexture, roomTexture])
+  }, [
+    variant,
+    bikeTexture,
+    miscTexture,
+    projectsTexture,
+    roomTexture,
+    bedroomImportantTexture,
+    bedroomMainTexture,
+    bedroomMiscTexture,
+  ])
 
   useMemo(() => {
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
 
-      const matchingTag = (['_Bike', '_Misc', '_Projects', '_Room'] as const).find((tag) =>
-        child.name.includes(tag)
-      )
-      if (!matchingTag) return
+      const matchingTagEntry = Object.entries(texturesByTag).find(([tag]) => child.name.includes(tag))
+      if (!matchingTagEntry) return
 
-      child.material = materialsByTag[matchingTag].clone()
+      const [, texture] = matchingTagEntry
+      child.material = new THREE.MeshStandardMaterial({ map: texture })
       child.castShadow = true
       child.receiveShadow = true
     })
-  }, [scene, materialsByTag])
+  }, [scene, texturesByTag])
 
   return <primitive object={scene} />;
+}
+
+function AnimatedModel({
+  modelPath,
+  playNonce,
+}: {
+  modelPath: string
+  playNonce: number
+}) {
+  const dracoLoader = useMemo(() => {
+    const loader = new DRACOLoader()
+    loader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+    return loader
+  }, [])
+  const { scene, animations } = useGLTF(modelPath, true, true, (loader) => {
+    loader.setDRACOLoader(dracoLoader)
+  })
+  const { actions } = useAnimations(animations, scene)
+
+  useEffect(() => {
+    Object.values(actions).forEach((action) => {
+      if (!action) return
+      action.stop()
+      action.setLoop(THREE.LoopOnce, 1)
+      action.clampWhenFinished = true
+    })
+  }, [actions])
+
+  useEffect(() => {
+    if (playNonce === 0) return
+
+    Object.values(actions).forEach((action) => {
+      if (!action) return
+      action.reset()
+      action.setLoop(THREE.LoopOnce, 1)
+      action.clampWhenFinished = true
+      action.play()
+    })
+  }, [playNonce, actions])
+
+  return <primitive object={scene} />
 }
 
 interface ProjectFocusTarget {
@@ -68,9 +133,10 @@ interface ProjectFocusTarget {
 interface CameraControllerProps {
   projectFocusTarget: ProjectFocusTarget | null
   isProjectCameraLocked: boolean
+  initialCameraPosition: [number, number, number]
 }
 
-function CameraController({ projectFocusTarget, isProjectCameraLocked }: CameraControllerProps) {
+function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCameraPosition }: CameraControllerProps) {
   const { camera, scene } = useThree()
   const perspectiveCamera = camera as THREE.PerspectiveCamera
   const { setHoveredObject, setIsZoomedIn } = useContext(CameraContext)
@@ -90,7 +156,7 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked }: CameraC
   // Raycaster for object detection
   const raycaster = useRef(new THREE.Raycaster())
   // Store original camera position
-  const originalPosition = useRef(new THREE.Vector3(1.5, 4.5, -1))
+  const originalPosition = useRef(new THREE.Vector3(...initialCameraPosition))
   // Smooth zoom state
   const zoomState = useRef({ isZooming: false, targetPosition: new THREE.Vector3(), startPosition: new THREE.Vector3(), progress: 0 })
   // Track if camera has zoomed in (can only zoom in once until zoomed out)
@@ -107,6 +173,14 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked }: CameraC
     startFov: perspectiveCamera.fov,
     targetFov: perspectiveCamera.fov,
   })
+
+  useEffect(() => {
+    originalPosition.current.set(...initialCameraPosition)
+    camera.position.set(...initialCameraPosition)
+    zoomState.current.isZooming = false
+    hasZoomedIn.current = false
+    setIsZoomedIn(false)
+  }, [initialCameraPosition])
 
   // Smooth zoom function that moves camera 2.5 meters forward in look direction
   const handleZoomIn = () => {
@@ -327,10 +401,48 @@ interface TestRoomCanvasProps {
   hudMode: 'WORKSHOP' | 'LAB' | 'BEDROOM'
   projectFocusTarget: ProjectFocusTarget | null
   isProjectCameraLocked: boolean
+  onRoomReady?: () => void
 }
 
-function TestRoomCanvas({ hudMode, projectFocusTarget, isProjectCameraLocked }: TestRoomCanvasProps) {
-  const modelPath = `${import.meta.env.BASE_URL}models/Workshop-v1.glb`
+function TestRoomCanvas({ hudMode, projectFocusTarget, isProjectCameraLocked, onRoomReady }: TestRoomCanvasProps) {
+  const isBedroomView = hudMode === 'LAB' || hudMode === 'BEDROOM'
+  const modelPath = `${import.meta.env.BASE_URL}models/${isBedroomView ? 'Bedroom-v1.glb' : 'Workshop-v1.glb'}`
+  const modelVariant: ModelVariant = isBedroomView ? 'BEDROOM' : 'WORKSHOP'
+  const cameraPosition: [number, number, number] = isBedroomView ? [1.5, 3, -2] : [1.5, 4.5, -1]
+  const hexapodPath = `${import.meta.env.BASE_URL}models/hexapod.glb`
+  const quadrupedPath = `${import.meta.env.BASE_URL}models/leg.glb`
+  const [hexapodPlayNonce, setHexapodPlayNonce] = useState(0)
+  const [quadrupedPlayNonce, setQuadrupedPlayNonce] = useState(0)
+  const [isAwaitingSceneReady, setIsAwaitingSceneReady] = useState(true)
+  const { active, progress } = useProgress()
+
+  useEffect(() => {
+    if (!projectFocusTarget) return
+
+    if (projectFocusTarget.projectId === 'hexapod') {
+      setHexapodPlayNonce((prev) => prev + 1)
+    }
+
+    if (projectFocusTarget.projectId === 'quadruped') {
+      setQuadrupedPlayNonce((prev) => prev + 1)
+    }
+  }, [projectFocusTarget])
+
+  useEffect(() => {
+    setIsAwaitingSceneReady(true)
+  }, [modelPath])
+
+  useEffect(() => {
+    if (!isAwaitingSceneReady) return
+    if (active || progress < 100) return
+
+    const readyTimer = window.setTimeout(() => {
+      setIsAwaitingSceneReady(false)
+      onRoomReady?.()
+    }, 250)
+
+    return () => window.clearTimeout(readyTimer)
+  }, [active, progress, isAwaitingSceneReady, onRoomReady])
 
   return (
     <div
@@ -344,7 +456,7 @@ function TestRoomCanvas({ hudMode, projectFocusTarget, isProjectCameraLocked }: 
       }}
     >
       <Canvas
-        camera={{ position: [1.5, 4.5, -1] }}
+        camera={{ position: cameraPosition }}
         gl={{ antialias: true }}
         style={{
           width: '100%',
@@ -363,13 +475,15 @@ function TestRoomCanvas({ hudMode, projectFocusTarget, isProjectCameraLocked }: 
         />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
-          <Model modelPath={modelPath} />
-          
+          <Model modelPath={modelPath} variant={modelVariant} />
+          {!isBedroomView && <AnimatedModel modelPath={hexapodPath} playNonce={hexapodPlayNonce} />}
+          {!isBedroomView && <AnimatedModel modelPath={quadrupedPath} playNonce={quadrupedPlayNonce} />}
         </Suspense>
         
         <CameraController
           projectFocusTarget={projectFocusTarget}
           isProjectCameraLocked={isProjectCameraLocked}
+          initialCameraPosition={cameraPosition}
         />
 
         <EffectComposer>

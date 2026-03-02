@@ -15,6 +15,9 @@ function App() {
   const [hudMode, setHudMode] = useState<HudMode>('WORKSHOP')
   const [projectFocusTarget, setProjectFocusTarget] = useState<ProjectFocusTarget | null>(null)
   const [isProjectCameraLocked, setIsProjectCameraLocked] = useState(false)
+  const [isRoomTransitionLoading, setIsRoomTransitionLoading] = useState(false)
+
+  const isBedroomMode = (mode: HudMode) => mode === 'LAB' || mode === 'BEDROOM'
 
   const handleProjectFocus = (
     target: { lookAt: [number, number, number]; zoomFov: number },
@@ -29,19 +32,33 @@ function App() {
     setIsProjectCameraLocked(false)
   }
 
+  const handleModeChange = (nextMode: HudMode) => {
+    if (nextMode === hudMode) return
+
+    // Only show loading screen when transitioning between Workshop and Bedroom scenes.
+    const isSceneSwitch = isBedroomMode(nextMode) !== isBedroomMode(hudMode)
+    if (isSceneSwitch) {
+      setIsRoomTransitionLoading(true)
+    }
+
+    setHudMode(nextMode)
+  }
+
   return (
     <div>
       <TestRoomCanvas
         hudMode={hudMode}
         projectFocusTarget={projectFocusTarget}
         isProjectCameraLocked={isProjectCameraLocked}
+        onRoomReady={() => setIsRoomTransitionLoading(false)}
       />
       <HudOverlay
         activeMode={hudMode}
-        onModeChange={setHudMode}
+        onModeChange={handleModeChange}
         onSelectUnit={(id) => console.log("Selected unit", id)}
         onProjectFocus={handleProjectFocus}
         onProjectPanelClose={handleProjectPanelClose}
+        isTransitionLoading={isRoomTransitionLoading}
       />
       {/*<Navbar />
       <OuterBox>

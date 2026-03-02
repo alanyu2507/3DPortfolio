@@ -30,6 +30,7 @@ export interface HudOverlayProps {
     projectId: string
   ) => void;
   onProjectPanelClose?: () => void;
+  isTransitionLoading?: boolean;
 }
 
 interface ProjectTab {
@@ -38,6 +39,10 @@ interface ProjectTab {
   content: string;
   embedUrl?: string;
   bulletPoints?: string[];
+  focusTarget?: {
+    lookAt: [number, number, number];
+    zoomFov: number;
+  };
 }
 
 interface ProjectItem {
@@ -59,7 +64,7 @@ const PROJECTS: ProjectItem[] = [
     placeholderCode: "PX-01",
     description: "Inverse Kinematics, Embedded Systems, Controls",
     focusTarget: {
-      lookAt: [0.83, 0.95, 4.1],
+      lookAt: [0.84, 1.04, 4.1],
       zoomFov: 20,
     },
     tabs: [
@@ -97,8 +102,8 @@ const PROJECTS: ProjectItem[] = [
     placeholderCode: "PX-02",
     description: "CAN, FreeRTOS, PicoSDK",
     focusTarget: {
-      lookAt: [-0.8, 0.9, 1.7],
-      zoomFov: 38,
+      lookAt: [-2.2, 1.14, 4.8],
+      zoomFov: 15,
     },
     tabs: [
       {
@@ -127,8 +132,8 @@ const PROJECTS: ProjectItem[] = [
     placeholderCode: "PX-03",
     description: "PCB Design, FreeRTOS",
     focusTarget: {
-      lookAt: [0.5, 1.4, 2.4],
-      zoomFov: 35,
+      lookAt: [-1.5, 1.1, 1.03],
+      zoomFov: 25,
     },
     tabs: [
       {
@@ -149,92 +154,124 @@ const PROJECTS: ProjectItem[] = [
 
 const LAB_PROJECTS: ProjectItem[] = [
   {
-    id: "lab-automation",
-    name: "Lab Automation Cell",
+    id: "about-me",
+    name: "About Me",
     placeholderCode: "LB-01",
-    description: "Sensor Fusion, Test Automation, QA Rigs",
+    description: "Background, Experience, and Focus",
     focusTarget: {
-      lookAt: [-0.4, 1.1, 1.6],
-      zoomFov: 40,
+      lookAt: [-4.05, 1.26, -0.025],
+      zoomFov: 10,
     },
     tabs: [
       {
         id: "overview",
         label: "Overview",
         content:
-          "Automated validation station for repeatable hardware and software integration tests.",
+          "Short profile, engineering background, and current areas of interest.",
       },
       {
-        id: "hardware",
-        label: "Hardware",
+        id: "experience",
+        label: "Experience",
         content:
-          "Placeholder hardware notes: fixture layout, instrumentation list, and power routing.",
-      },
-      {
-        id: "results",
-        label: "Results",
-        content:
-          "Placeholder metrics: pass/fail trendline, mean cycle time, and anomaly counts.",
-      },
-    ],
-  },
-  {
-    id: "sterile-vision",
-    name: "Sterile Vision Suite",
-    placeholderCode: "LB-02",
-    description: "Computer Vision, Data Pipelines, Monitoring",
-    focusTarget: {
-      lookAt: [1.2, 1.0, 0.6],
-      zoomFov: 36,
-    },
-    tabs: [
-      {
-        id: "overview",
-        label: "Overview",
-        content:
-          "Real-time visual inspection pipeline for identifying setup drift and procedural variance.",
-      },
-      {
-        id: "pipeline",
-        label: "Pipeline",
-        content:
-          "Placeholder pipeline notes: capture stage, preprocessing stage, and inference stage.",
+          "Career highlights, systems built, and hands-on domains.",
       },
       {
         id: "notes",
         label: "Notes",
         content:
-          "Placeholder notes: model versioning plan, retraining cadence, and quality controls.",
+          "Additional context, goals, and personal interests.",
       },
     ],
   },
   {
-    id: "ops-dashboard",
-    name: "Ops Dashboard",
+    id: "software-projects",
+    name: "Software Projects",
     placeholderCode: "LB-03",
-    description: "Telemetry, Alerting, SOP Integration",
+    description: "Selected builds and demos",
     focusTarget: {
-      lookAt: [0.3, 1.3, -0.3],
-      zoomFov: 34,
+      lookAt: [-2.7, 0.91, 2.09],
+      zoomFov: 20,
     },
     tabs: [
       {
         id: "overview",
         label: "Overview",
         content:
-          "Unified operations board for tracking lab throughput, alerts, and readiness in one view.",
+          "This is all the software projects I've worked on.",
+        focusTarget: {
+          lookAt: [-2.7, 0.91, 2.09],
+          zoomFov: 20,
+        },
       },
       {
-        id: "alerts",
-        label: "Alerts",
+        id: "pyopticl",
+        label: "PyOpticL",
         content:
-          "Placeholder alerts section: escalation matrix, thresholds, and notification channels.",
+          "PyOpticL project details and implementation notes.",
+        focusTarget: {
+          lookAt: [-2.3, 0.95, 2.17],
+          zoomFov: 12,
+        },
       },
       {
-        id: "runbook",
-        label: "Runbook",
+        id: "turn-based-toolkit",
+        label: "Turn-Based Toolkit",
         content:
-          "Placeholder runbook: startup checklist, fault response procedure, and shutdown sequence.",
+          "Turn-Based Toolkit architecture and core systems.",
+        focusTarget: {
+          lookAt: [-3, 1, 1.8],
+          zoomFov: 12,
+        },
+      },
+      {
+        id: "8-ball",
+        label: "8-Ball",
+        content:
+          "8-Ball project overview and key mechanics.",
+        focusTarget: {
+          lookAt: [-2.9, 1.6, 1.89],
+          zoomFov: 12,
+        },
+      },
+      {
+        id: "aimlabs",
+        label: "Aimlabs",
+        content:
+          "Aimlabs project highlights and performance metrics.",
+        focusTarget: {
+          lookAt: [-2.86, 0.485, 1.76],
+          zoomFov: 12,
+        },
+      },
+    ],
+  },
+  {
+    id: "books",
+    name: "Books",
+    placeholderCode: "LB-02",
+    description: "Reading List and Takeaways",
+    focusTarget: {
+      lookAt: [0.7, 0.63, 2.9],
+      zoomFov: 15,
+    },
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        content:
+          "Books that influenced my approach to engineering and problem-solving.",
+      },
+      {
+        id: "favorites",
+        label: "Favorites",
+        content:
+          "Top picks and key ideas pulled from each title.",
+      },
+      {
+        id: "notes",
+        label: "Notes",
+        content:
+          "Current reading queue and notes in progress.",
       },
     ],
   },
@@ -246,6 +283,7 @@ export default function HudOverlay({
   onSelectUnit,
   onProjectFocus,
   onProjectPanelClose,
+  isTransitionLoading = false,
 }: HudOverlayProps) {
   const { hoveredObject } = useContext(CameraContext);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -282,6 +320,12 @@ export default function HudOverlay({
       ...prev,
       [projectId]: tabId,
     }));
+
+    const project = activeProjects.find((item) => item.id === projectId);
+    const tab = project?.tabs.find((item) => item.id === tabId);
+    if (tab?.focusTarget) {
+      onProjectFocus?.(tab.focusTarget, projectId);
+    }
   };
 
   const closeProjectPanel = () => {
@@ -314,9 +358,9 @@ export default function HudOverlay({
           <header className="hudTopBar">
             <div className="hudTopBar__left">
               <span className="hudTopBar__label">SITE MAP</span>
-              <span className="hudTopBar__value">LOCATION: MIDDLE EAST</span>
-              <span className="hudTopBar__value">ASSIGNMENT: BRAVO GERONIMO</span>
-              <span className="hudTopBar__value">MISSION TIME: 54:08 HOURS</span>
+              <span className="hudTopBar__value">LOCATION: NIGHT CITY</span>
+              <span className="hudTopBar__value">LOCAL TIME: 03:17</span>
+              <span className="hudTopBar__value">ICE: ONLINE</span>
             </div>
 
             <div className="hudTopBar__center">
@@ -326,6 +370,7 @@ export default function HudOverlay({
                   className="hudTopButtons__btn"
                   aria-pressed={activeMode === "WORKSHOP"}
                   onClick={() => onModeChange("WORKSHOP")}
+                  disabled={isTransitionLoading}
                 >
                   WORKSHOP
                 </button>
@@ -334,14 +379,7 @@ export default function HudOverlay({
                   className="hudTopButtons__btn"
                   aria-pressed={activeMode === "LAB"}
                   onClick={() => onModeChange("LAB")}
-                >
-                  LAB
-                </button>
-                <button
-                  type="button"
-                  className="hudTopButtons__btn"
-                  aria-pressed={activeMode === "BEDROOM"}
-                  onClick={() => onModeChange("BEDROOM")}
+                  disabled={isTransitionLoading}
                 >
                   BEDROOM
                 </button>
@@ -492,6 +530,20 @@ export default function HudOverlay({
           <div className="hudBottomCenter">CONNECTION: GOOD COMMS OPEN</div>
         </div>
       </div>
+      {isTransitionLoading && (
+        <div className="hudLoadingScreen" role="status" aria-live="polite" aria-busy="true">
+          <div className="hudLoadingScreen__panel">
+            <div className="hudLoadingScreen__label">ROOM TRANSITION</div>
+            <div className="hudLoadingScreen__title">
+              LOADING {activeMode === "WORKSHOP" ? "WORKSHOP" : "BEDROOM"}
+            </div>
+            <div className="hudLoadingScreen__bar" aria-hidden="true">
+              <span className="hudLoadingScreen__barFill" />
+            </div>
+            <div className="hudLoadingScreen__hint">SYNCING SCENE DATA</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

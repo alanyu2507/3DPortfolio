@@ -565,7 +565,10 @@ export default function HudOverlay({
   const activeTab = activeProject?.tabs.find((tab) => tab.id === activeTabId) ?? null;
 
   return (
-    <div className="hudRoot" aria-label="Tactical surveillance HUD overlay">
+    <div
+      className={`hudRoot${activeProject ? " hudRoot--projectPanelOpen" : ""}`}
+      aria-label="Tactical surveillance HUD overlay"
+    >
       {/* Fullscreen visual layers - never capture input */}
       <div className="hudContent">
         <div className="hudGrid" aria-hidden="true" />

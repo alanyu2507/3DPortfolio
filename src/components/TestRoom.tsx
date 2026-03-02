@@ -405,9 +405,16 @@ interface TestRoomCanvasProps {
   projectFocusTarget: ProjectFocusTarget | null
   isProjectCameraLocked: boolean
   onRoomReady?: () => void
+  onRoomLoadProgress?: (progress: number) => void
 }
 
-function TestRoomCanvas({ hudMode, projectFocusTarget, isProjectCameraLocked, onRoomReady }: TestRoomCanvasProps) {
+function TestRoomCanvas({
+  hudMode,
+  projectFocusTarget,
+  isProjectCameraLocked,
+  onRoomReady,
+  onRoomLoadProgress,
+}: TestRoomCanvasProps) {
   const isBedroomView = hudMode === 'LAB' || hudMode === 'BEDROOM'
   const modelPath = `${import.meta.env.BASE_URL}models/${isBedroomView ? 'Bedroom-v1.glb' : 'Workshop-v1.glb'}`
   const modelVariant: ModelVariant = isBedroomView ? 'BEDROOM' : 'WORKSHOP'
@@ -446,6 +453,11 @@ function TestRoomCanvas({ hudMode, projectFocusTarget, isProjectCameraLocked, on
 
     return () => window.clearTimeout(readyTimer)
   }, [active, progress, isAwaitingSceneReady, onRoomReady])
+
+  useEffect(() => {
+    if (!isAwaitingSceneReady) return
+    onRoomLoadProgress?.(Math.min(100, Math.max(0, progress)))
+  }, [progress, isAwaitingSceneReady, onRoomLoadProgress])
 
   return (
     <div

@@ -1,0 +1,9 @@
+/* Styles are inherited from HUD panel utility classes. */
+
+.quadrupedOverview__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}

@@ -15,9 +15,39 @@
  *     );
  *   }
  */
-import { useState, useContext, useMemo, useEffect, type CSSProperties } from "react";
+import {
+  useState,
+  useContext,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+  type CSSProperties,
+  type ComponentType,
+} from "react";
 import "./HudOverlay.css";
 import { CameraContext } from "../Contexts/CameraContext";
+import HexapodOverview from "../Project Panel/Workshop/Hexapod/Overview";
+import HexapodArchitecture from "../Project Panel/Workshop/Hexapod/Architecture";
+import HexapodNotes from "../Project Panel/Workshop/Hexapod/Notes";
+import QuadrupedOverview from "../Project Panel/Workshop/Quadruped/Overview";
+import QuadrupedNotes from "../Project Panel/Workshop/Quadruped/Notes";
+import ElectricMotorcycleOverview from "../Project Panel/Workshop/ElectricMotorcycle/Overview";
+import ElectricMotorcycleNotes from "../Project Panel/Workshop/ElectricMotorcycle/Notes";
+import ServingMachineOverview from "../Project Panel/Workshop/ServingMachine/Overview";
+import ServingMachineArchitecture from "../Project Panel/Workshop/ServingMachine/Architecture";
+import ServingMachineNotes from "../Project Panel/Workshop/ServingMachine/Notes";
+import AboutMeOverview from "../Project Panel/Bedroom/AboutMe/Overview";
+import AboutMeSkills from "../Project Panel/Bedroom/AboutMe/Skills";
+import AboutMeFunFacts from "../Project Panel/Bedroom/AboutMe/FunFacts";
+import SoftwareProjectsOverview from "../Project Panel/Bedroom/SoftwareProjects/Overview";
+import SoftwareProjectsPyOpticL from "../Project Panel/Bedroom/SoftwareProjects/PyOpticL";
+import SoftwareProjectsTurnBasedToolkit from "../Project Panel/Bedroom/SoftwareProjects/TurnBasedToolkit";
+import SoftwareProjectsEightBall from "../Project Panel/Bedroom/SoftwareProjects/EightBall";
+import SoftwareProjectsAimlabs from "../Project Panel/Bedroom/SoftwareProjects/Aimlabs";
+import BooksOverview from "../Project Panel/Bedroom/Books/Overview";
+import BooksFavorites from "../Project Panel/Bedroom/Books/Favorites";
+import BooksNotes from "../Project Panel/Bedroom/Books/Notes";
 
 export type HudMode = "WORKSHOP" | "LAB" | "BEDROOM";
 
@@ -36,9 +66,7 @@ export interface HudOverlayProps {
 interface ProjectTab {
   id: string;
   label: string;
-  content: string;
-  embedUrl?: string;
-  bulletPoints?: string[];
+  Content: ComponentType;
   focusTarget?: {
     lookAt: [number, number, number];
     zoomFov: number;
@@ -127,28 +155,17 @@ const PROJECTS: ProjectItem[] = [
       {
         id: "overview",
         label: "Overview",
-        content:
-          "Modular Hexapod project overview:",
-        embedUrl: "https://www.youtube.com/embed/_bQvNhBsuP8",
-        bulletPoints: [
-          "INVERSE KINEMATICS IMPLEMENTATION FOR 3-DOF LEGS",
-          "CLOSED-LOOP FEEDBACK CONTROL FOR UNEVEN TERRAIN NAVIGATION AND SELF-BALANCING",
-          "50MS RESPONSE LATENCY FOR REAL-TIME CONTROL",
-          "MODULAR ATTACHMENT SYSTEM FOR DYNAMIC UTILITY INTEGRATION",
-          "OPTIMIZED MULTI-THREADING AND MEMORY ALLOCATION TO AVOID CPU INTERRUPTS",
-        ],
+        Content: HexapodOverview,
       },
       {
         id: "architecture",
         label: "Architecture",
-        content:
-          "Milestone placeholders: architecture review complete, prototype validation pending, deployment planning queued.",
+        Content: HexapodArchitecture,
       },
       {
-        id: "notes",
-        label: "Notes",
-        content:
-          "Notes placeholder: replace this with custom details, docs links, and engineering commentary for Aegis.",
+        id: "build-process",
+        label: "Build Process",
+        Content: HexapodNotes,
       },
     ],
   },
@@ -165,27 +182,47 @@ const PROJECTS: ProjectItem[] = [
       {
         id: "overview",
         label: "Overview",
-        content:
-          "Project Orion is a data and telemetry workspace for surfacing mission-critical trends in real time.",
+        Content: QuadrupedOverview,
       },
-      {
-        id: "architecture",
-        label: "Architecture",
-        content:
-          "Stack placeholder: define service boundaries, integration points, and ownership for each subsystem.",
-      },
+
       {
         id: "notes",
         label: "Notes",
-        content:
-          "Risk placeholder: identify unknowns, mitigation steps, and target response windows per issue.",
+        Content: QuadrupedNotes,
       },
     ],
   },
   {
-    id: "electric-motorcycle",
-    name: "Electric Motorcycle",
+    id: "serving-machine",
+    name: "Serving Machine",
     placeholderCode: "PX-03",
+    description: "Mechatronics, CAD, 3D Printing",
+    focusTarget: {
+      lookAt: [-4.5, 0.06, 3.95],
+      zoomFov: 14,
+    },
+    tabs: [
+      {
+        id: "overview",
+        label: "Overview",
+        Content: ServingMachineOverview,
+      },
+      {
+        id: "architecture",
+        label: "Architecture",
+        Content: ServingMachineArchitecture,
+      },
+      {
+        id: "build-process",
+        label: "Build Process",
+        Content: ServingMachineNotes,
+      },
+    ],
+  },
+  {
+    id: "electric-motorbike",
+    name: "Electric Motorbike",
+    placeholderCode: "PX-04",
     description: "PCB Design, FreeRTOS",
     focusTarget: {
       lookAt: [-1.5, 1.1, 1.03],
@@ -195,14 +232,12 @@ const PROJECTS: ProjectItem[] = [
       {
         id: "overview",
         label: "Overview",
-        content:
-          "Project Voyager tracks long-horizon research and translates exploratory work into build-ready initiatives.",
+        Content: ElectricMotorcycleOverview,
       },
       {
         id: "notes",
         label: "Notes",
-        content:
-          "Assets placeholder: link design references, technical specs, and implementation resources.",
+        Content: ElectricMotorcycleNotes,
       },
     ],
   },
@@ -222,20 +257,17 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "overview",
         label: "Overview",
-        content:
-          "Short profile, engineering background, and current areas of interest.",
+        Content: AboutMeOverview,
       },
       {
-        id: "experience",
-        label: "Experience",
-        content:
-          "Career highlights, systems built, and hands-on domains.",
+        id: "skills",
+        label: "Skills",
+        Content: AboutMeSkills,
       },
       {
         id: "notes",
-        label: "Notes",
-        content:
-          "Additional context, goals, and personal interests.",
+        label: "Fun Facts",
+        Content: AboutMeFunFacts,
       },
     ],
   },
@@ -252,8 +284,7 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "overview",
         label: "Overview",
-        content:
-          "This is all the software projects I've worked on.",
+        Content: SoftwareProjectsOverview,
         focusTarget: {
           lookAt: [-2.7, 0.91, 2.09],
           zoomFov: 20,
@@ -262,8 +293,7 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "pyopticl",
         label: "PyOpticL",
-        content:
-          "PyOpticL project details and implementation notes.",
+        Content: SoftwareProjectsPyOpticL,
         focusTarget: {
           lookAt: [-2.3, 0.95, 2.17],
           zoomFov: 12,
@@ -272,8 +302,7 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "turn-based-toolkit",
         label: "Turn-Based Toolkit",
-        content:
-          "Turn-Based Toolkit architecture and core systems.",
+        Content: SoftwareProjectsTurnBasedToolkit,
         focusTarget: {
           lookAt: [-3, 1, 1.8],
           zoomFov: 12,
@@ -282,8 +311,7 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "8-ball",
         label: "8-Ball",
-        content:
-          "8-Ball project overview and key mechanics.",
+        Content: SoftwareProjectsEightBall,
         focusTarget: {
           lookAt: [-2.9, 1.6, 1.89],
           zoomFov: 12,
@@ -292,8 +320,7 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "aimlabs",
         label: "Aimlabs",
-        content:
-          "Aimlabs project highlights and performance metrics.",
+        Content: SoftwareProjectsAimlabs,
         focusTarget: {
           lookAt: [-2.86, 0.485, 1.76],
           zoomFov: 12,
@@ -314,20 +341,17 @@ const LAB_PROJECTS: ProjectItem[] = [
       {
         id: "overview",
         label: "Overview",
-        content:
-          "Books that influenced my approach to engineering and problem-solving.",
+        Content: BooksOverview,
       },
       {
         id: "favorites",
         label: "Favorites",
-        content:
-          "Top picks and key ideas pulled from each title.",
+        Content: BooksFavorites,
       },
       {
         id: "notes",
         label: "Notes",
-        content:
-          "Current reading queue and notes in progress.",
+        Content: BooksNotes,
       },
     ],
   },
@@ -348,8 +372,10 @@ export default function HudOverlay({
   const CODE_TYPE_SPEED_MIN_MS = 1;
   const CODE_TYPE_SPEED_MAX_MS = 3;
   const CODE_LINE_ADVANCE_DELAY_MS = 20;
-  const { hoveredObject } = useContext(CameraContext);
+  const { hoveredObject, clickedObject, setClickedObject } = useContext(CameraContext);
+  const suppressRaycastOpenUntilRef = useRef(0);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
   const [activeTabByProject, setActiveTabByProject] = useState<Record<string, string>>(
     {}
   );
@@ -383,10 +409,11 @@ export default function HudOverlay({
     [activeMode]
   );
 
-  const isHovered = hoveredObject.includes("hover");
+  const isHovered = hoveredObject.endsWith("-hover");
 
   useEffect(() => {
     setSelectedProjectId(null);
+    setIsHelpPanelOpen(false);
     onProjectPanelClose?.();
   }, [activeMode]);
 
@@ -527,10 +554,11 @@ export default function HudOverlay({
     };
   }, []);
 
-  const handleProjectSelect = (projectId: string) => {
+  const handleProjectSelect = useCallback((projectId: string) => {
     const project = activeProjects.find((item) => item.id === projectId);
     if (!project) return;
 
+    setIsHelpPanelOpen(false);
     setSelectedProjectId(projectId);
     setActiveTabByProject((prev) => ({
       ...prev,
@@ -538,7 +566,21 @@ export default function HudOverlay({
     }));
     onProjectFocus?.(project.focusTarget, projectId);
     onSelectUnit?.(projectId);
-  };
+  }, [activeProjects, onProjectFocus, onSelectUnit]);
+
+  useEffect(() => {
+    if (clickedObject === "None") return;
+    if (Date.now() < suppressRaycastOpenUntilRef.current) {
+      setClickedObject("None");
+      return;
+    }
+    if (selectedProjectId || isHelpPanelOpen) {
+      setClickedObject("None");
+      return;
+    }
+    handleProjectSelect(clickedObject);
+    setClickedObject("None");
+  }, [clickedObject, handleProjectSelect, isHelpPanelOpen, selectedProjectId, setClickedObject]);
 
   const handleTabSelect = (projectId: string, tabId: string) => {
     setActiveTabByProject((prev) => ({
@@ -554,7 +596,16 @@ export default function HudOverlay({
   };
 
   const closeProjectPanel = () => {
+    suppressRaycastOpenUntilRef.current = Date.now() + 250;
+    setClickedObject("None");
     setSelectedProjectId(null);
+    setIsHelpPanelOpen(false);
+    onProjectPanelClose?.();
+  };
+
+  const openHelpPanel = () => {
+    setSelectedProjectId(null);
+    setIsHelpPanelOpen(true);
     onProjectPanelClose?.();
   };
 
@@ -563,10 +614,11 @@ export default function HudOverlay({
     ? activeTabByProject[activeProject.id] ?? activeProject.tabs[0].id
     : null;
   const activeTab = activeProject?.tabs.find((tab) => tab.id === activeTabId) ?? null;
+  const isAnyPanelOpen = Boolean(activeProject) || isHelpPanelOpen;
 
   return (
     <div
-      className={`hudRoot${activeProject ? " hudRoot--projectPanelOpen" : ""}`}
+      className={`hudRoot${isAnyPanelOpen ? " hudRoot--projectPanelOpen" : ""}`}
       aria-label="Tactical surveillance HUD overlay"
     >
       {/* Fullscreen visual layers - never capture input */}
@@ -681,28 +733,41 @@ export default function HudOverlay({
               </div>
 
               <div className="hudProjectPanel__content" role="tabpanel">
+                <activeTab.Content />
+              </div>
+            </section>
+          )}
+
+          {isHelpPanelOpen && !activeProject && (
+            <section className="hudProjectPanel" aria-label="Help panel">
+              <div className="hudProjectPanel__header">
+                <button
+                  type="button"
+                  className="hudProjectPanel__closeBtn"
+                  onClick={closeProjectPanel}
+                  aria-label="Close help panel"
+                >
+                  x
+                </button>
+                <div className="hudProjectPanel__titleWrap">
+                  <div className="hudProjectPanel__title">Help</div>
+                  <div className="hudProjectPanel__subtitle">How to use this site</div>
+                </div>
+              </div>
+
+              <div className="hudProjectPanel__content" role="region" aria-label="Help content">
                 <div className="hudProjectPanel__contentBody">
-                  <p className="hudProjectPanel__contentText">{activeTab.content}</p>
-                  {activeTab.embedUrl && (
-                    <div className="hudProjectPanel__videoWrap">
-                      <iframe
-                        className="hudProjectPanel__videoFrame"
-                        src={activeTab.embedUrl}
-                        title={`${activeProject.name} overview video`}
-                        loading="lazy"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-                  {activeTab.bulletPoints && activeTab.bulletPoints.length > 0 && (
-                    <ul className="hudProjectPanel__bulletList">
-                      {activeTab.bulletPoints.map((point) => (
-                        <li key={point}>{point}</li>
-                      ))}
-                    </ul>
-                  )}
+                  <p className="hudProjectPanel__contentText">
+                    Click interface elements or 3D objects to explore projects.
+                  </p>
+                  <ul className="hudProjectPanel__bulletList">
+                    <li>Use the top buttons to switch between Workshop and Bedroom scenes.</li>
+                    <li>Workshop focuses on hardware projects. Bedroom focuses on software projects and a little bit about me.</li>
+                    <li>Select any item in the left Projects panel to open details on the right.</li>
+                    <li>Use the tabs inside a project panel to browse different information.</li>
+                    <li>Drag your mouse to look around the room and click interactive objects when highlighted.</li>
+                    <li>Press the panel close button to return to free room browsing.</li>
+                  </ul>
                 </div>
               </div>
             </section>
@@ -710,7 +775,7 @@ export default function HudOverlay({
 
           {/* --- BOTTOM LEFT (cursor axis indicators) --- */}
           <div className="hudBottomLeft">
-            <div className="hudBottomLeft__title">CURSOR AXIS</div>
+            <div className="hudBottomLeft__title">SYSTEM STATUS</div>
             <div className="hudBottomLeft__circles">
               {[
                 { id: "x", label: "X", value: cursorPercent.x },
@@ -793,6 +858,15 @@ export default function HudOverlay({
             </div>
           </div>
           */}
+
+          <button
+            type="button"
+            className="hudHelpButton"
+            onClick={openHelpPanel}
+            aria-label="Open help panel"
+          >
+            Help
+          </button>
 
           {/* --- CENTER RETICLE (square corners only, same CSS/logic as Crosshair.tsx) --- */}
           <div className="hudCenterReticle">

@@ -1,0 +1,36 @@
+/* Styles are inherited from HUD panel utility classes. */
+
+.aboutMeOverview__socialLinks {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.aboutMeOverview__socialButton {
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0;
+  color: var(--hud-text);
+  display: inline-flex;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  height: 2.1rem;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  padding: 0 0.9rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.aboutMeOverview__socialButton:hover {
+  border-color: var(--hud-cyan);
+  color: var(--hud-cyan);
+  background: rgba(70, 200, 255, 0.07);
+}
+
+.aboutMeOverview__socialButton:focus-visible {
+  outline: 1px solid var(--hud-cyan);
+  outline-offset: 1px;
+}

@@ -1,0 +1,10 @@
+/* Styles are inherited from HUD panel utility classes. */
+
+.hexapodArchitecture__diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 640px;
+  margin: 0 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}

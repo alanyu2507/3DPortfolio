@@ -9,6 +9,47 @@ import { FileContext } from '../Contexts/FileContext'
 
 type ModelVariant = 'WORKSHOP' | 'BEDROOM'
 
+type ProjectId =
+  | 'hexapod'
+  | 'quadruped'
+  | 'serving-machine'
+  | 'electric-motorcycle'
+  | 'software-projects'
+
+const RAYCAST_TARGETS: { projectId: ProjectId; tokens: string[] }[] = [
+  { projectId: 'hexapod', tokens: ['hexapod.glb', 'hexapod'] },
+  { projectId: 'quadruped', tokens: ['leg.glb', 'leg'] },
+  { projectId: 'serving-machine', tokens: ['vball.glb', 'vball'] },
+  { projectId: 'electric-motorcycle', tokens: ['bike.project'] },
+  {
+    projectId: 'software-projects',
+    tokens: ['kb3d_cpi_intapartments_a_monitorsetup.001'],
+  },
+]
+
+const normalizeObjectToken = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+const getInteractiveProjectIdFromObject = (object: THREE.Object3D | null): ProjectId | null => {
+  let current: THREE.Object3D | null = object
+  while (current) {
+    const userDataProjectId = current.userData?.interactiveProjectId as ProjectId | undefined
+    if (userDataProjectId) {
+      return userDataProjectId
+    }
+
+    const objectName = normalizeObjectToken(current.name)
+    const matchedTarget = RAYCAST_TARGETS.find(({ tokens }) =>
+      tokens.some((token) => objectName.includes(normalizeObjectToken(token)))
+    )
+    if (matchedTarget) {
+      return matchedTarget.projectId
+    }
+    current = current.parent
+  }
+
+  return null
+}
+
 function Model({ modelPath, variant }: { modelPath: string; variant: ModelVariant }) {
   const dracoLoader = useMemo(() => {
     const loader = new DRACOLoader()
@@ -86,9 +127,11 @@ function Model({ modelPath, variant }: { modelPath: string; variant: ModelVarian
 function AnimatedModel({
   modelPath,
   playNonce,
+  projectId,
 }: {
   modelPath: string
   playNonce: number
+  projectId: ProjectId
 }) {
   const dracoLoader = useMemo(() => {
     const loader = new DRACOLoader()
@@ -102,6 +145,10 @@ function AnimatedModel({
   // after switching room variants.
   const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene])
   const { actions } = useAnimations(animations, clonedScene)
+
+  useEffect(() => {
+    clonedScene.userData.interactiveProjectId = projectId
+  }, [clonedScene, projectId])
 
   useEffect(() => {
     Object.values(actions).forEach((action) => {
@@ -142,13 +189,14 @@ interface CameraControllerProps {
 function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCameraPosition }: CameraControllerProps) {
   const { camera, scene } = useThree()
   const perspectiveCamera = camera as THREE.PerspectiveCamera
-  const { setHoveredObject, setIsZoomedIn } = useContext(CameraContext)
+  const { setHoveredObject, setClickedObject, setIsZoomedIn } = useContext(CameraContext)
   const { setXCoordinate, setYCoordinate } = useContext(CameraContext)
   const { folderName, setZoomIn, setZoomOut } = useContext(FileContext)
   const [, setZoomLevel] = useState<number>(5) // Initial zoom level
   const minZoom = 1 // Minimum zoom (closer)
   const maxZoom = 20 // Maximum zoom (further)
   const zoomSpeed = 0.2 // How fast zoom changes
+  const horizontalDeadzoneRatio = 0.2
   
   // Cursor-based offsets for X and Y
   const cursorOffsets = useRef({ x: 0, y: 0 })
@@ -168,6 +216,7 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
   const neutralLookTarget = useRef(new THREE.Vector3(-4.4, 0.5, 4))
   const hasProjectZoomFocus = useRef(false)
   const lockedLookAtTarget = useRef(new THREE.Vector3())
+  const hoveredProjectIdRef = useRef<ProjectId | null>(null)
   const focusAnimationState = useRef({
     isActive: false,
     progress: 0,
@@ -229,7 +278,16 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
     const handleMouseMove = (event: MouseEvent) => {
       if (isProjectCameraLocked) return
 
-      const x = (event.clientX / window.innerWidth) * 2 - 1
+      const viewportWidth = Math.max(window.innerWidth, 1)
+      const horizontalRatio = event.clientX / viewportWidth
+      if (
+        horizontalRatio <= horizontalDeadzoneRatio ||
+        horizontalRatio >= 1 - horizontalDeadzoneRatio
+      ) {
+        return
+      }
+
+      const x = (event.clientX / viewportWidth) * 2 - 1
       const y = -(event.clientY / window.innerHeight) * 2 + 1
 
       // Only update coordinates while no folder is selected
@@ -247,6 +305,12 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
     }
 
     const handleWheel = (event: WheelEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest('.hudProjectPanel, .hudLeftPanel')) {
+        // Let UI panels consume wheel input for their own scrolling.
+        return
+      }
+
       event.preventDefault()
       const delta = event.deltaY > 0 ? zoomSpeed : -zoomSpeed
       setZoomLevel((prev) => {
@@ -296,6 +360,21 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
     }
     hasProjectZoomFocus.current = false
   }, [isProjectCameraLocked, camera])
+
+  useEffect(() => {
+    const handleMouseClick = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest('.hudRoot')) {
+        return
+      }
+      if (!hoveredProjectIdRef.current) return
+      setClickedObject(hoveredProjectIdRef.current)
+    }
+
+    window.addEventListener('click', handleMouseClick)
+    return () => {
+      window.removeEventListener('click', handleMouseClick)
+    }
+  }, [setClickedObject])
 
   useFrame(() => {
     if (focusAnimationState.current.isActive) {
@@ -378,17 +457,16 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
     raycaster.current.set(camera.position, cameraDirection)
     const intersects = raycaster.current.intersectObjects(scene.children, true)
     
-    // Check if raycast hit anything
-    if (intersects.length > 0) {
-      const hitObject = intersects[0].object
-      const objectName = hitObject.name || hitObject.parent?.name || 'Unnamed Object'
-      console.log('Line trace hit point:', intersects[0].point)
-      
-      setHoveredObject(objectName)
-    } else {
-      // No object hit, reset hovered object
-      setHoveredObject("None")
+    let hoveredProjectId: ProjectId | null = null
+    for (const intersection of intersects) {
+      const matchedProjectId = getInteractiveProjectIdFromObject(intersection.object)
+      if (matchedProjectId) {
+        hoveredProjectId = matchedProjectId
+        break
+      }
     }
+    hoveredProjectIdRef.current = hoveredProjectId
+    setHoveredObject(hoveredProjectId ? `${hoveredProjectId}-hover` : 'None')
     
     // Apply zoom by adjusting camera position
     /*const basePosition = [0, 2, zoomLevel] as [number, number, number]
@@ -421,8 +499,10 @@ function TestRoomCanvas({
   const cameraPosition: [number, number, number] = isBedroomView ? [1.5, 3, -2] : [1.5, 4.5, -1]
   const hexapodPath = `${import.meta.env.BASE_URL}models/hexapod.glb`
   const quadrupedPath = `${import.meta.env.BASE_URL}models/leg.glb`
+  const vballPath = `${import.meta.env.BASE_URL}models/Vball.glb`
   const [hexapodPlayNonce, setHexapodPlayNonce] = useState(0)
   const [quadrupedPlayNonce, setQuadrupedPlayNonce] = useState(0)
+  const [vballPlayNonce, setVballPlayNonce] = useState(0)
   const [isAwaitingSceneReady, setIsAwaitingSceneReady] = useState(true)
   const { active, progress } = useProgress()
 
@@ -435,6 +515,10 @@ function TestRoomCanvas({
 
     if (projectFocusTarget.projectId === 'quadruped') {
       setQuadrupedPlayNonce((prev) => prev + 1)
+    }
+
+    if (projectFocusTarget.projectId === 'serving-machine') {
+      setVballPlayNonce((prev) => prev + 1)
     }
   }, [projectFocusTarget])
 
@@ -491,8 +575,15 @@ function TestRoomCanvas({
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
           <Model modelPath={modelPath} variant={modelVariant} />
-          {!isBedroomView && <AnimatedModel modelPath={hexapodPath} playNonce={hexapodPlayNonce} />}
-          {!isBedroomView && <AnimatedModel modelPath={quadrupedPath} playNonce={quadrupedPlayNonce} />}
+          {!isBedroomView && (
+            <AnimatedModel modelPath={hexapodPath} playNonce={hexapodPlayNonce} projectId="hexapod" />
+          )}
+          {!isBedroomView && (
+            <AnimatedModel modelPath={quadrupedPath} playNonce={quadrupedPlayNonce} projectId="quadruped" />
+          )}
+          {!isBedroomView && (
+            <AnimatedModel modelPath={vballPath} playNonce={vballPlayNonce} projectId="serving-machine" />
+          )}
         </Suspense>
         
         <CameraController

@@ -495,6 +495,7 @@ function TestRoomCanvas({
 }: TestRoomCanvasProps) {
   const isBedroomView = hudMode === 'LAB' || hudMode === 'BEDROOM'
   const modelPath = `${import.meta.env.BASE_URL}models/${isBedroomView ? 'Bedroom-v1.glb' : 'Workshop-v1.glb'}`
+  const bedroomModelPath = `${import.meta.env.BASE_URL}models/Bedroom-v1.glb`
   const modelVariant: ModelVariant = isBedroomView ? 'BEDROOM' : 'WORKSHOP'
   const cameraPosition: [number, number, number] = isBedroomView ? [1.5, 3, -2] : [1.5, 4.5, -1]
   const hexapodPath = `${import.meta.env.BASE_URL}models/hexapod.glb`
@@ -505,6 +506,12 @@ function TestRoomCanvas({
   const [vballPlayNonce, setVballPlayNonce] = useState(0)
   const [isAwaitingSceneReady, setIsAwaitingSceneReady] = useState(true)
   const { active, progress } = useProgress()
+
+  useEffect(() => {
+    if (isBedroomView) return
+    // Warm the bedroom GLTF cache while workshop is active.
+    useGLTF.preload(bedroomModelPath)
+  }, [isBedroomView, bedroomModelPath])
 
   useEffect(() => {
     if (!projectFocusTarget) return

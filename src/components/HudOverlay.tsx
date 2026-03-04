@@ -333,8 +333,9 @@ export default function HudOverlay({
   const CURSOR_BLINK_MAX_ACTIVE = 15;
   const { hoveredObject, clickedObject, setClickedObject } = useContext(CameraContext);
   const suppressRaycastOpenUntilRef = useRef(0);
+  const previousModeRef = useRef<HudMode>(activeMode);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
+  const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(true);
   const [activeTabByProject, setActiveTabByProject] = useState<Record<string, string>>(
     {}
   );
@@ -359,10 +360,12 @@ export default function HudOverlay({
   const isHovered = hoveredObject.endsWith("-hover");
 
   useEffect(() => {
+    if (previousModeRef.current === activeMode) return;
+    previousModeRef.current = activeMode;
     setSelectedProjectId(null);
     setIsHelpPanelOpen(false);
     onProjectPanelClose?.();
-  }, [activeMode]);
+  }, [activeMode, onProjectPanelClose]);
 
   useEffect(() => {
     const clampPercent = (value: number) => Math.max(0, Math.min(100, value));

@@ -22,7 +22,8 @@ export default function Architecture() {
         alt="Hexapod electronics architecture diagram"
       />
       <p>
-        The PS4 controller would send raw inputs to the RPI4 over bluetooth. The RPI4 is the main controller. It performed all the inverse kinematics calculations and handled the state machine. The Servo2040 recieved packaged serial commands from the RPI4 and set appropriate servos to desired angles. The Servo2040 would send limit switch data, which tracked when each leg touched solid ground, back to the RPI4 for gait correction.
+      The PS4 controller would send raw inputs to the RPI4 over bluetooth. The RPI4 is the main controller. It performed all the inverse kinematics calculations and handled the state machine. The Servo2040 received packaged serial commands from the RPI4 and set appropriate servos to desired angles. The Servo2040 would send limit switch data, which tracked when each leg touched solid ground, back to the RPI4 for gait correction.
+
       </p>
       
     </div>

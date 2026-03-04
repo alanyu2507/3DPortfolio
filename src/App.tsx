@@ -1,6 +1,5 @@
 import TestRoomCanvas from './components/TestRoom'
-import HudOverlay from './components/HudOverlay'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 type HudMode = 'WORKSHOP' | 'LAB' | 'BEDROOM'
 
@@ -9,6 +8,8 @@ type ProjectFocusTarget = {
   lookAt: [number, number, number]
   zoomFov: number
 }
+
+const HudOverlay = lazy(() => import('./components/HudOverlay'))
 
 
 function App() {
@@ -87,14 +88,16 @@ function App() {
         onRoomLoadProgress={handleRoomLoadProgress}
       />
       {isInitialSceneReady && (
-        <HudOverlay
-          activeMode={hudMode}
-          onModeChange={handleModeChange}
-          onSelectUnit={(id) => console.log("Selected unit", id)}
-          onProjectFocus={handleProjectFocus}
-          onProjectPanelClose={handleProjectPanelClose}
-          isTransitionLoading={isRoomTransitionLoading}
-        />
+        <Suspense fallback={null}>
+          <HudOverlay
+            activeMode={hudMode}
+            onModeChange={handleModeChange}
+            onSelectUnit={(id) => console.log("Selected unit", id)}
+            onProjectFocus={handleProjectFocus}
+            onProjectPanelClose={handleProjectPanelClose}
+            isTransitionLoading={isRoomTransitionLoading}
+          />
+        </Suspense>
       )}
       {isInitialOverlayVisible && (
         <div

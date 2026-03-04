@@ -1,5 +1,3 @@
-import "./Overview.css";
-
 export default function Overview() {
   const imageBase = `${import.meta.env.BASE_URL}images/ServingMachine/`;
 

@@ -16,6 +16,8 @@
  *   }
  */
 import {
+  lazy,
+  Suspense,
   useState,
   useContext,
   useMemo,
@@ -24,30 +26,46 @@ import {
   useRef,
   type CSSProperties,
   type ComponentType,
+  type LazyExoticComponent,
 } from "react";
 import "./HudOverlay.css";
 import { CameraContext } from "../Contexts/CameraContext";
-import HexapodOverview from "../Project Panel/Workshop/Hexapod/Overview";
-import HexapodArchitecture from "../Project Panel/Workshop/Hexapod/Architecture";
-import HexapodNotes from "../Project Panel/Workshop/Hexapod/Notes";
-import QuadrupedOverview from "../Project Panel/Workshop/Quadruped/Overview";
-import QuadrupedNotes from "../Project Panel/Workshop/Quadruped/Notes";
-import ElectricMotorcycleOverview from "../Project Panel/Workshop/ElectricMotorcycle/Overview";
-import ElectricMotorcycleNotes from "../Project Panel/Workshop/ElectricMotorcycle/Notes";
-import ServingMachineOverview from "../Project Panel/Workshop/ServingMachine/Overview";
-import ServingMachineArchitecture from "../Project Panel/Workshop/ServingMachine/Architecture";
-import ServingMachineNotes from "../Project Panel/Workshop/ServingMachine/Notes";
-import AboutMeOverview from "../Project Panel/Bedroom/AboutMe/Overview";
-import AboutMeSkills from "../Project Panel/Bedroom/AboutMe/Skills";
-import AboutMeFunFacts from "../Project Panel/Bedroom/AboutMe/FunFacts";
-import SoftwareProjectsOverview from "../Project Panel/Bedroom/SoftwareProjects/Overview";
-import SoftwareProjectsPyOpticL from "../Project Panel/Bedroom/SoftwareProjects/PyOpticL";
-import SoftwareProjectsTurnBasedToolkit from "../Project Panel/Bedroom/SoftwareProjects/TurnBasedToolkit";
-import SoftwareProjectsEightBall from "../Project Panel/Bedroom/SoftwareProjects/EightBall";
-import SoftwareProjectsAimlabs from "../Project Panel/Bedroom/SoftwareProjects/Aimlabs";
-import BooksOverview from "../Project Panel/Bedroom/Books/Overview";
-import BooksFavorites from "../Project Panel/Bedroom/Books/Favorites";
-import BooksNotes from "../Project Panel/Bedroom/Books/Notes";
+
+const HexapodOverview = lazy(() => import("../Project Panel/Workshop/Hexapod/Overview"));
+const HexapodArchitecture = lazy(() => import("../Project Panel/Workshop/Hexapod/Architecture"));
+const HexapodNotes = lazy(() => import("../Project Panel/Workshop/Hexapod/Notes"));
+const QuadrupedOverview = lazy(() => import("../Project Panel/Workshop/Quadruped/Overview"));
+const QuadrupedNotes = lazy(() => import("../Project Panel/Workshop/Quadruped/Notes"));
+const ElectricMotorcycleOverview = lazy(
+  () => import("../Project Panel/Workshop/ElectricMotorcycle/Overview")
+);
+const ElectricMotorcycleNotes = lazy(
+  () => import("../Project Panel/Workshop/ElectricMotorcycle/Notes")
+);
+const ServingMachineOverview = lazy(() => import("../Project Panel/Workshop/ServingMachine/Overview"));
+const ServingMachineArchitecture = lazy(
+  () => import("../Project Panel/Workshop/ServingMachine/Architecture")
+);
+const ServingMachineNotes = lazy(() => import("../Project Panel/Workshop/ServingMachine/Notes"));
+const AboutMeOverview = lazy(() => import("../Project Panel/Bedroom/AboutMe/Overview"));
+const AboutMeSkills = lazy(() => import("../Project Panel/Bedroom/AboutMe/Skills"));
+const AboutMeFunFacts = lazy(() => import("../Project Panel/Bedroom/AboutMe/FunFacts"));
+const SoftwareProjectsOverview = lazy(
+  () => import("../Project Panel/Bedroom/SoftwareProjects/Overview")
+);
+const SoftwareProjectsPyOpticL = lazy(
+  () => import("../Project Panel/Bedroom/SoftwareProjects/PyOpticL")
+);
+const SoftwareProjectsTurnBasedToolkit = lazy(
+  () => import("../Project Panel/Bedroom/SoftwareProjects/TurnBasedToolkit")
+);
+const SoftwareProjectsEightBall = lazy(
+  () => import("../Project Panel/Bedroom/SoftwareProjects/EightBall")
+);
+const SoftwareProjectsAimlabs = lazy(() => import("../Project Panel/Bedroom/SoftwareProjects/Aimlabs"));
+const Books = lazy(() => import("../Project Panel/Bedroom/Media/Books"));
+const Games = lazy(() => import("../Project Panel/Bedroom/Media/Games"));
+const Music = lazy(() => import("../Project Panel/Bedroom/Media/Music"));
 
 export type HudMode = "WORKSHOP" | "LAB" | "BEDROOM";
 
@@ -66,7 +84,7 @@ export interface HudOverlayProps {
 interface ProjectTab {
   id: string;
   label: string;
-  Content: ComponentType;
+  Content: LazyExoticComponent<ComponentType>;
   focusTarget?: {
     lookAt: [number, number, number];
     zoomFov: number;
@@ -84,62 +102,6 @@ interface ProjectItem {
   };
   tabs: ProjectTab[];
 }
-
-const CODE_STREAM_MAX_LINES = 7;
-const CODE_PULSE_BOX_COUNT = 7;
-
-const CODE_IDENTIFIERS = [
-  "nodeMap",
-  "signalCache",
-  "hudState",
-  "renderQueue",
-  "packetStore",
-  "frameDelta",
-  "cursorAxis",
-  "telemetryBus",
-];
-
-const CODE_TYPES = ["number", "string", "boolean", "Record<string, number>", "unknown[]"];
-
-const CODE_ACTIONS = [
-  "queueFrame",
-  "hydratePanel",
-  "syncTelemetry",
-  "parsePayload",
-  "flushBuffer",
-  "stabilizeClock",
-  "rebuildRoute",
-];
-
-const randomIndex = (max: number) => Math.floor(Math.random() * max);
-
-const randomFrom = <T,>(items: T[]) => items[randomIndex(items.length)];
-
-const randomCodeLine = () => {
-  const indent = "\t".repeat(Math.floor(Math.random() * 3) + 1);
-  const lineTypes = [
-    () =>
-      `const ${randomFrom(CODE_IDENTIFIERS)}: ${randomFrom(CODE_TYPES)} = ${Math.floor(
-        Math.random() * 900 + 100
-      )};`,
-    () =>
-      `if (${randomFrom(CODE_IDENTIFIERS)} && ${Math.random() < 0.5 ? "isReady" : "hasSignal"}) { ${randomFrom(
-        CODE_ACTIONS
-      )}(); }`,
-    () =>
-      `for (let i = 0; i < ${Math.floor(Math.random() * 6 + 3)}; i += 1) { ${randomFrom(
-        CODE_IDENTIFIERS
-      )}.push(i); }`,
-    () =>
-      `type ${Math.random() < 0.5 ? "TelemetryPacket" : "HudFrame"} = { id: string; ts: number; ok: boolean };`,
-    () =>
-      `await ${randomFrom(CODE_ACTIONS)}(${Math.random() < 0.5 ? "payload" : "context"});`,
-    () =>
-      `${randomFrom(CODE_IDENTIFIERS)} = ${randomFrom(CODE_IDENTIFIERS)}.filter((item) => item !== null);`,
-  ];
-
-  return `${indent}${lineTypes[randomIndex(lineTypes.length)]()}`;
-};
 
 const PROJECTS: ProjectItem[] = [
   {
@@ -247,8 +209,8 @@ const LAB_PROJECTS: ProjectItem[] = [
   {
     id: "about-me",
     name: "About Me",
-    placeholderCode: "LB-01",
-    description: "Background, Experience, and Focus",
+    placeholderCode: "BD-01",
+    description: "Background",
     focusTarget: {
       lookAt: [-4.05, 1.26, -0.025],
       zoomFov: 10,
@@ -274,8 +236,8 @@ const LAB_PROJECTS: ProjectItem[] = [
   {
     id: "software-projects",
     name: "Software Projects",
-    placeholderCode: "LB-03",
-    description: "Selected builds and demos",
+    placeholderCode: "BD-02",
+    description: "Builds and Demos",
     focusTarget: {
       lookAt: [-2.7, 0.91, 2.09],
       zoomFov: 20,
@@ -329,29 +291,29 @@ const LAB_PROJECTS: ProjectItem[] = [
     ],
   },
   {
-    id: "books",
-    name: "Books",
-    placeholderCode: "LB-02",
-    description: "Reading List and Takeaways",
+    id: "media",
+    name: "Media",
+    placeholderCode: "BD-03",
+    description: "Some of my favorite media",
     focusTarget: {
       lookAt: [0.7, 0.63, 2.9],
       zoomFov: 15,
     },
     tabs: [
       {
-        id: "overview",
-        label: "Overview",
-        Content: BooksOverview,
+        id: "books",
+        label: "Books",
+        Content: Books,
       },
       {
-        id: "favorites",
-        label: "Favorites",
-        Content: BooksFavorites,
+        id: "games",
+        label: "Games",
+        Content: Games,
       },
       {
-        id: "notes",
-        label: "Notes",
-        Content: BooksNotes,
+        id: "music",
+        label: "Music",
+        Content: Music,
       },
     ],
   },
@@ -369,9 +331,6 @@ export default function HudOverlay({
   const CURSOR_RING_CIRCUMFERENCE = 2 * Math.PI * CURSOR_RING_RADIUS;
   const CURSOR_BLINK_BOX_COUNT = 60;
   const CURSOR_BLINK_MAX_ACTIVE = 15;
-  const CODE_TYPE_SPEED_MIN_MS = 1;
-  const CODE_TYPE_SPEED_MAX_MS = 3;
-  const CODE_LINE_ADVANCE_DELAY_MS = 20;
   const { hoveredObject, clickedObject, setClickedObject } = useContext(CameraContext);
   const suppressRaycastOpenUntilRef = useRef(0);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -380,6 +339,7 @@ export default function HudOverlay({
     {}
   );
   const [cursorPercent, setCursorPercent] = useState({ x: 50, y: 50 });
+  const cursorPercentRef = useRef({ x: 50, y: 50 });
   const [blinkCells, setBlinkCells] = useState<
     { isOn: boolean; color: string; opacity: number; fadeMs: number; nextToggleAt: number }[]
   >(() =>
@@ -388,19 +348,6 @@ export default function HudOverlay({
       color: "rgba(70, 200, 255, 1)",
       opacity: 0,
       fadeMs: 1400,
-      nextToggleAt: 0,
-    }))
-  );
-  const [codeLogLines, setCodeLogLines] = useState<string[]>([]);
-  const [codeTypingLine, setCodeTypingLine] = useState("");
-  const [codeTargetLine, setCodeTargetLine] = useState(() => randomCodeLine());
-  const [codePulseBoxes, setCodePulseBoxes] = useState<
-    { isOn: boolean; opacity: number; fadeMs: number; nextToggleAt: number }[]
-  >(() =>
-    Array.from({ length: CODE_PULSE_BOX_COUNT }, () => ({
-      isOn: false,
-      opacity: 0,
-      fadeMs: 900,
       nextToggleAt: 0,
     }))
   );
@@ -419,77 +366,36 @@ export default function HudOverlay({
 
   useEffect(() => {
     const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+    let frameId = 0;
+
+    const flushCursorPercent = () => {
+      frameId = 0;
+      setCursorPercent((prev) => {
+        if (prev.x === cursorPercentRef.current.x && prev.y === cursorPercentRef.current.y) {
+          return prev;
+        }
+        return cursorPercentRef.current;
+      });
+    };
+
     const handlePointerMove = (event: MouseEvent) => {
       const width = Math.max(window.innerWidth, 1);
       const height = Math.max(window.innerHeight, 1);
-      const x = clampPercent((event.clientX / width) * 100);
-      const y = clampPercent((event.clientY / height) * 100);
-      setCursorPercent({ x: Math.round(x), y: Math.round(y) });
+      cursorPercentRef.current = {
+        x: Math.round(clampPercent((event.clientX / width) * 100)),
+        y: Math.round(clampPercent((event.clientY / height) * 100)),
+      };
+      if (frameId === 0) {
+        frameId = window.requestAnimationFrame(flushCursorPercent);
+      }
     };
 
     window.addEventListener("mousemove", handlePointerMove);
     return () => {
       window.removeEventListener("mousemove", handlePointerMove);
-    };
-  }, []);
-
-  useEffect(() => {
-    const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
-
-    if (codeTypingLine.length < codeTargetLine.length) {
-      const timeoutId = window.setTimeout(() => {
-        setCodeTypingLine(codeTargetLine.slice(0, codeTypingLine.length + 1));
-      }, Math.round(randomBetween(CODE_TYPE_SPEED_MIN_MS, CODE_TYPE_SPEED_MAX_MS)));
-
-      return () => {
-        window.clearTimeout(timeoutId);
-      };
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setCodeLogLines((prev) => [...prev, codeTargetLine].slice(-CODE_STREAM_MAX_LINES));
-      setCodeTypingLine("");
-      setCodeTargetLine(randomCodeLine());
-    }, CODE_LINE_ADVANCE_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [codeTargetLine, codeTypingLine]);
-
-  useEffect(() => {
-    const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
-    const now = Date.now();
-
-    setCodePulseBoxes((prev) =>
-      prev.map((box) => ({
-        ...box,
-        nextToggleAt: now + randomBetween(120, 1600),
-        fadeMs: Math.round(randomBetween(420, 1600)),
-      }))
-    );
-
-    const intervalId = window.setInterval(() => {
-      const tickNow = Date.now();
-
-      setCodePulseBoxes((prev) =>
-        prev.map((box) => {
-          if (tickNow < box.nextToggleAt) return box;
-
-          const turnOn = !box.isOn && Math.random() > 0.35;
-          return {
-            ...box,
-            isOn: turnOn,
-            opacity: turnOn ? Number(randomBetween(0.25, 0.95).toFixed(2)) : 0,
-            fadeMs: Math.round(randomBetween(380, 1500)),
-            nextToggleAt: tickNow + randomBetween(180, 1300),
-          };
-        })
-      );
-    }, 140);
-
-    return () => {
-      window.clearInterval(intervalId);
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
     };
   }, []);
 
@@ -733,7 +639,9 @@ export default function HudOverlay({
               </div>
 
               <div className="hudProjectPanel__content" role="tabpanel">
-                <activeTab.Content />
+                <Suspense fallback={null}>
+                  <activeTab.Content />
+                </Suspense>
               </div>
             </section>
           )}
@@ -820,44 +728,6 @@ export default function HudOverlay({
               ))}
             </div>
           </div>
-
-          {/*
-          --- BOTTOM RIGHT (code stream) ---
-          <div className="hudBottomRight">
-            <span className="hudBottomRight__corner hudBottomRight__corner--tl" aria-hidden="true" />
-            <span className="hudBottomRight__corner hudBottomRight__corner--tr" aria-hidden="true" />
-            <span className="hudBottomRight__corner hudBottomRight__corner--bl" aria-hidden="true" />
-            <span className="hudBottomRight__corner hudBottomRight__corner--br" aria-hidden="true" />
-            <div className="hudBottomRight__title">DATA UPLOAD</div>
-            <div className="hudBottomRight__content">
-              <div className="hudBottomRight__codeBox" aria-hidden="true">
-                {codeLogLines.map((line, index) => (
-                  <div key={`code-line-${index}-${line}`} className="hudBottomRight__codeLine">
-                    {line}
-                  </div>
-                ))}
-                <div className="hudBottomRight__codeLine hudBottomRight__codeLine--typing">
-                  {codeTypingLine}
-                  <span className="hudBottomRight__caret" />
-                </div>
-              </div>
-              <div className="hudBottomRight__pulseColumn" aria-hidden="true">
-                {codePulseBoxes.map((box, index) => (
-                  <span
-                    key={`pulse-box-${index}`}
-                    className={`hudBottomRight__pulseBox${box.isOn ? " hudBottomRight__pulseBox--on" : ""}`}
-                    style={
-                      {
-                        "--pulse-opacity": box.opacity,
-                        "--pulse-fade-ms": `${box.fadeMs}ms`,
-                      } as CSSProperties
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          */}
 
           <button
             type="button"

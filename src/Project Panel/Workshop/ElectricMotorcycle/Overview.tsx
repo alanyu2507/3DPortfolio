@@ -11,7 +11,7 @@ export default function Overview() {
         alt="SPARK electric motorbike"
       />
       <p className="hudProjectPanel__contentText">
-        I am on the High Voltage sub-team of the <a href="https://spark.engin.umich.edu/" target="_blank" rel="noopener noreferrer">SPARK Electric Motorbike</a> team. We have previouosly built a 210kW electric bike from scratch that has a top speed of 200mph. This year, we are beginning to design a brand new bike.
+        I am on the High Voltage sub-team of the <a href="https://spark.engin.umich.edu/" target="_blank" rel="noopener noreferrer">SPARK Electric Motorbike</a> team. We have previously built a 210kW electric bike from scratch that has a top speed of 200mph. This year, we are beginning to design a brand new bike.
       </p>
     </div>
   );

@@ -15,7 +15,7 @@ export default function Notes() {
       />
 
       <p className="hudProjectPanel__contentText">
-        We first did the inverse kinematic calculations on paper.
+        We initially did the inverse kinematic calculations on paper.
       </p>
       <img
         className="hexapodNotes__image"
@@ -46,7 +46,7 @@ export default function Notes() {
         src={`${imageBase}HexapodGait.gif`}
         alt="Initial gait motion test"
       />
-      <p className="hudProjectPanel__contentText">We then incorporated limit switches. The basic idea is for the leg to keep decreasing it's z coordinate at the end of it's gait until the limit switch is triggered, meaning it has touched solid ground.</p>
+      <p className="hudProjectPanel__contentText">We then incorporated limit switches. The basic idea is for the leg to keep decreasing its z coordinate at the end of its gait until the limit switch is triggered, meaning it has touched solid ground.</p>
       <img
         className="hexapodNotes__image"
         src={`${imageBase}GaitStateMachine.jpg`}
@@ -63,13 +63,13 @@ export default function Notes() {
         src={`${imageBase}LimitSwitch.gif`}
         alt="Limit switch simulation test"
       />
-      <p className="hudProjectPanel__contentText">After we finished our gait algoirhtm, we attached all 6 legs and began working on the flexing algorithm. That was pretty easy since it was just offsetting z coordinates of each leg based on flex direction.</p>
+      <p className="hudProjectPanel__contentText">After we finished our gait algorithm, we attached all 6 legs and began working on the flexing algorithm. That was pretty easy since it was just offsetting z coordinates of each leg based on flex direction.</p>
       <img
         className="hexapodNotes__image"
         src={`${imageBase}flex.gif`}
         alt="Hexapod body flexing behavior"
       />
-      <p className="hudProjectPanel__contentText">We then designed the overall state machine to allow flexing, walking, and single leg contro.</p>
+      <p className="hudProjectPanel__contentText">We then designed the overall state machine to allow flexing, walking, and single leg control.</p>
       <img
         className="hexapodNotes__image"
         src={`${imageBase}HexapodStateMachine.png`}

@@ -1,5 +1,3 @@
-import "./Overview.css";
-
 export default function Overview() {
   return (
     <div className="hudProjectPanel__contentBody">
@@ -15,7 +13,7 @@ export default function Overview() {
           allowFullScreen
         />
       </div>
-      As a die-hard Cyberpunk 2077 fan (if this portfolio didn't already make it obvious), I wanted to recreate the iconic Flathead robot from the game. It's functionalities were a little too sci-fi though, so I settled for a hexapod as the closest thing.
+      As a die-hard Cyberpunk 2077 fan (if this portfolio didn't already make it obvious), I wanted to recreate the iconic Flathead robot from the game. Its functionalities were a little too sci-fi though, so I settled for a hexapod as the closest thing.
       <br />
       <br />
       While the CAD is open-source from <a href="https://github.com/MakeYourPet/hexapod" 

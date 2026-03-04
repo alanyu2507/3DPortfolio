@@ -1,5 +1,3 @@
-import "./Architecture.css";
-
 export default function Architecture() {
   const diagramSrc = `${import.meta.env.BASE_URL}images/ServingMachine/HBridge.jpg`;
 
@@ -8,7 +6,7 @@ export default function Architecture() {
       <p className="hudProjectPanel__contentText">Materials:</p>
       <ul className="hudProjectPanel__bulletList">
         <li>20,000 RPM 775 DC Motor x2</li>
-        <li>30A Dueal-Channel H Brdige x1</li>
+        <li>30A Dual-Channel H Bridge x1</li>
         <li>Arduino Uno x1</li>
         <li>PS4 Controller x1</li>
         <li>Aluminum Extrusion x10</li>

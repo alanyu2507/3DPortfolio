@@ -8,7 +8,7 @@ export default function Notes() {
         <li>I yo-yo</li>
         <li>I'm from Toronto, Canada</li>
         <li>I've lived in Shanghai for 10 years (fluent in Mandarin)</li>
-        <li>I love doing enviornment design in Blender. The 3D scenes in this portfolio was made and baked in Blender with free assets. I animated the moving projects myself.</li>
+        <li>I love doing environment design in Blender. The 3D scenes in this portfolio were made and baked in Blender with free assets. I animated the moving projects myself.</li>
       </ul>
     </div>
   );

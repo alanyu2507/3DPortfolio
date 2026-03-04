@@ -7,7 +7,7 @@ export default function Overview() {
     <div className="hudProjectPanel__contentBody">
       <img
         className="quadrupedOverview__image"
-        src={`${imageBase}Quadruped.jpg`}
+        src={`${imageBase}Quadruped.webp`}
         alt="Quadruped robot prototype"
       />
       <p className="hudProjectPanel__contentText">

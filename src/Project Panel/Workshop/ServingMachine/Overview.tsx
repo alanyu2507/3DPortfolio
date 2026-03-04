@@ -21,7 +21,7 @@ export default function Overview() {
       <p className="hudProjectPanel__contentText">
         Here's a photo of my team and I after winning the provincial championship (I'm the third one from the left in the back row):
       </p>
-      <img src={`${imageBase}championship.jpg`} alt="Provincial championship team photo" />
+      <img src={`${imageBase}championship.webp`} alt="Provincial championship team photo" />
     </div>
   );
 }

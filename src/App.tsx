@@ -11,6 +11,17 @@ type ProjectFocusTarget = {
 
 const HudOverlay = lazy(() => import('./components/HudOverlay'))
 
+const INITIAL_LOADING_STREAM_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+const INITIAL_LOADING_STREAM_LINE_LENGTH = 140
+
+const createInitialLoadingStreamLine = () =>
+  Array.from(
+    { length: INITIAL_LOADING_STREAM_LINE_LENGTH },
+    () =>
+      INITIAL_LOADING_STREAM_CHARSET[
+        Math.floor(Math.random() * INITIAL_LOADING_STREAM_CHARSET.length)
+      ]
+  ).join('')
 
 function App() {
   const [hudMode, setHudMode] = useState<HudMode>('WORKSHOP')
@@ -18,10 +29,13 @@ function App() {
   const [isProjectCameraLocked, setIsProjectCameraLocked] = useState(false)
   const [isRoomTransitionLoading, setIsRoomTransitionLoading] = useState(false)
   const [initialLoadProgress, setInitialLoadProgress] = useState(0)
-  const [initialLoadTarget, setInitialLoadTarget] = useState(0)
   const [isInitialSceneReady, setIsInitialSceneReady] = useState(false)
   const [isInitialOverlayFading, setIsInitialOverlayFading] = useState(false)
   const [isInitialOverlayVisible, setIsInitialOverlayVisible] = useState(true)
+  const [initialLoadingStreamLines, setInitialLoadingStreamLines] = useState(() => [
+    createInitialLoadingStreamLine(),
+    createInitialLoadingStreamLine(),
+  ])
 
   const isBedroomMode = (mode: HudMode) => mode === 'LAB' || mode === 'BEDROOM'
 
@@ -52,7 +66,6 @@ function App() {
 
   const handleRoomReady = () => {
     setIsRoomTransitionLoading(false)
-    setInitialLoadTarget(100)
     setInitialLoadProgress(100)
     setIsInitialSceneReady(true)
   }
@@ -60,54 +73,43 @@ function App() {
   const handleRoomLoadProgress = (progress: number) => {
     if (isInitialSceneReady) return
     const clampedProgress = Math.min(100, Math.max(0, progress))
-    const cappedUntilReady = Math.min(80, clampedProgress)
-    setInitialLoadTarget((prev) => Math.max(prev, cappedUntilReady))
+    setInitialLoadProgress(clampedProgress)
   }
 
   useEffect(() => {
-    if (isInitialSceneReady) return
+    if (!isInitialOverlayVisible || isInitialSceneReady) return
 
     const intervalId = window.setInterval(() => {
-      setInitialLoadProgress((previousProgress) => {
-        const targetProgress = Math.min(80, initialLoadTarget)
-        if (previousProgress >= targetProgress) return previousProgress
-
-        // Move quickly early on, then intentionally creep near 80%.
-        const ratePerSecond =
-          previousProgress < 50
-            ? 28
-            : previousProgress < 65
-              ? 14
-              : previousProgress < 75
-                ? 6
-                : previousProgress < 79.5
-                  ? 1.6
-                  : 0.35
-
-        const nextProgress = previousProgress + ratePerSecond * 0.05
-        return Math.min(targetProgress, nextProgress)
-      })
-    }, 50)
+      setInitialLoadingStreamLines([
+        createInitialLoadingStreamLine(),
+        createInitialLoadingStreamLine(),
+      ])
+    }, 140)
 
     return () => window.clearInterval(intervalId)
-  }, [initialLoadTarget, isInitialSceneReady])
+  }, [isInitialOverlayVisible, isInitialSceneReady])
 
   useEffect(() => {
-    if (!isInitialSceneReady) return
+    if (
+      !isInitialSceneReady ||
+      !isInitialOverlayVisible
+    ) {
+      return
+    }
 
     const fadeStartTimer = window.setTimeout(() => {
       setIsInitialOverlayFading(true)
-    }, 300)
+    }, 120)
 
     const hideOverlayTimer = window.setTimeout(() => {
       setIsInitialOverlayVisible(false)
-    }, 1500)
+    }, 700)
 
     return () => {
       window.clearTimeout(fadeStartTimer)
       window.clearTimeout(hideOverlayTimer)
     }
-  }, [isInitialSceneReady])
+  }, [isInitialSceneReady, isInitialOverlayVisible])
 
   return (
     <div>
@@ -160,7 +162,26 @@ function App() {
             }}
           >
             <div style={{ textAlign: 'center' }}>
-              {isInitialSceneReady ? 'Connected' : 'Connecting...'}
+              {isInitialSceneReady ? (
+                'Connected'
+              ) : (
+                <>
+                  Connecting
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: 'inline-flex',
+                      width: '18px',
+                      justifyContent: 'space-between',
+                      marginLeft: '2px',
+                    }}
+                  >
+                    <span style={{ animation: 'initialLoadDotBlink 1s infinite' }}>.</span>
+                    <span style={{ animation: 'initialLoadDotBlink 1s infinite 0.2s' }}>.</span>
+                    <span style={{ animation: 'initialLoadDotBlink 1s infinite 0.4s' }}>.</span>
+                  </span>
+                </>
+              )}
             </div>
             <div
               aria-hidden="true"
@@ -173,14 +194,64 @@ function App() {
             >
               <div
                 style={{
-                  width: `${isInitialSceneReady ? 100 : Math.min(80, initialLoadProgress)}%`,
+                  width: `${initialLoadProgress}%`,
                   height: '100%',
                   background: 'rgba(255, 255, 255, 0.9)',
                   transition: 'width 140ms linear',
                 }}
               />
             </div>
+            <div
+              aria-hidden="true"
+              style={{
+                width: '100%',
+                display: 'grid',
+                gap: '2px',
+                marginTop: '-4px',
+              }}
+            >
+              {initialLoadingStreamLines.map((line, index) => (
+                <div
+                  key={`${index}-${line}`}
+                  style={{
+                    width: '100%',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    color: 'rgba(255, 255, 255, 0.75)',
+                    fontSize: '8px',
+                    lineHeight: 1.2,
+                    letterSpacing: '0',
+                    textTransform: 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      animation: isInitialSceneReady
+                        ? 'none'
+                        : 'initialLoadDataStream 2.2s linear infinite',
+                    }}
+                  >
+                    {line}
+                    {line}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
+          <style>
+            {`
+              @keyframes initialLoadDataStream {
+                0% { transform: translateX(0%); }
+                100% { transform: translateX(-50%); }
+              }
+
+              @keyframes initialLoadDotBlink {
+                0%, 20%, 100% { opacity: 0.2; }
+                40%, 60% { opacity: 1; }
+              }
+            `}
+          </style>
         </div>
       )}
       {/*<Navbar />

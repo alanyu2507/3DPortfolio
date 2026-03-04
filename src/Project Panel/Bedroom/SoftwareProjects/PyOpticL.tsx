@@ -14,7 +14,7 @@ export default function PyOpticL() {
       <p className="hudProjectPanel__contentText">
         Original FreeCAD model:
       </p>
-      <img src="images/SoftwareProjects/mot.png" alt="Original FreeCAD model" className="hexapodArchitecture__diagram" />
+      <img src="images/SoftwareProjects/mot.webp" alt="Original FreeCAD model" className="hexapodArchitecture__diagram" />
       <p className="hudProjectPanel__contentText">
         New rendering pipeline:
       </p>

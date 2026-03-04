@@ -1,5 +1,5 @@
 export default function Architecture() {
-  const diagramSrc = `${import.meta.env.BASE_URL}images/ServingMachine/HBridge.jpg`;
+  const diagramSrc = `${import.meta.env.BASE_URL}images/ServingMachine/HBridge.webp`;
 
   return (
     <div className="hudProjectPanel__contentBody">

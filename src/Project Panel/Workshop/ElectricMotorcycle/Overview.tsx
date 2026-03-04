@@ -7,7 +7,7 @@ export default function Overview() {
     <div className="hudProjectPanel__contentBody">
       <img
         className="electricMotorcycleOverview__image"
-        src={`${imageBase}motorbike.png`}
+        src={`${imageBase}motorbike.webp`}
         alt="SPARK electric motorbike"
       />
       <p className="hudProjectPanel__contentText">

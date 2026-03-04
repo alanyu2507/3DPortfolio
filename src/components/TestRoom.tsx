@@ -7,8 +7,6 @@ import { DRACOLoader, SkeletonUtils } from 'three-stdlib'
 import { CameraContext } from '../Contexts/CameraContext'
 import { FileContext } from '../Contexts/FileContext'
 
-type ModelVariant = 'WORKSHOP' | 'BEDROOM'
-
 type ProjectId =
   | 'hexapod'
   | 'quadruped'
@@ -50,7 +48,7 @@ const getInteractiveProjectIdFromObject = (object: THREE.Object3D | null): Proje
   return null
 }
 
-function Model({ modelPath, variant }: { modelPath: string; variant: ModelVariant }) {
+function WorkshopModel({ modelPath }: { modelPath: string }) {
   const dracoLoader = useMemo(() => {
     const loader = new DRACOLoader()
     loader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
@@ -63,9 +61,6 @@ function Model({ modelPath, variant }: { modelPath: string; variant: ModelVarian
   const miscTexture = useTexture(`${import.meta.env.BASE_URL}Textures/Misc.webp`)
   const projectsTexture = useTexture(`${import.meta.env.BASE_URL}Textures/Projects.webp`)
   const roomTexture = useTexture(`${import.meta.env.BASE_URL}Textures/Room.webp`)
-  const bedroomImportantTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomImportant.webp`)
-  const bedroomMainTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomMain.webp`)
-  const bedroomMiscTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomMisc.webp`)
 
   const texturesByTag = useMemo(() => {
     const prepareTexture = (texture: THREE.Texture) => {
@@ -78,17 +73,6 @@ function Model({ modelPath, variant }: { modelPath: string; variant: ModelVarian
     prepareTexture(miscTexture)
     prepareTexture(projectsTexture)
     prepareTexture(roomTexture)
-    prepareTexture(bedroomImportantTexture)
-    prepareTexture(bedroomMainTexture)
-    prepareTexture(bedroomMiscTexture)
-
-    if (variant === 'BEDROOM') {
-      return {
-        _BedroomImportant: bedroomImportantTexture,
-        _BedroomMain: bedroomMainTexture,
-        _BedroomMisc: bedroomMiscTexture,
-      }
-    }
 
     return {
       _Bike: bikeTexture,
@@ -97,14 +81,10 @@ function Model({ modelPath, variant }: { modelPath: string; variant: ModelVarian
       _Room: roomTexture,
     }
   }, [
-    variant,
     bikeTexture,
     miscTexture,
     projectsTexture,
     roomTexture,
-    bedroomImportantTexture,
-    bedroomMainTexture,
-    bedroomMiscTexture,
   ])
 
   useMemo(() => {
@@ -122,6 +102,54 @@ function Model({ modelPath, variant }: { modelPath: string; variant: ModelVarian
   }, [scene, texturesByTag])
 
   return <primitive object={scene} />;
+}
+
+function BedroomModel({ modelPath }: { modelPath: string }) {
+  const dracoLoader = useMemo(() => {
+    const loader = new DRACOLoader()
+    loader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+    return loader
+  }, [])
+  const { scene } = useGLTF(modelPath, true, true, (loader) => {
+    loader.setDRACOLoader(dracoLoader)
+  })
+  const bedroomImportantTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomImportant.webp`)
+  const bedroomMainTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomMain.webp`)
+  const bedroomMiscTexture = useTexture(`${import.meta.env.BASE_URL}Textures/BedroomMisc.webp`)
+
+  const texturesByTag = useMemo(() => {
+    const prepareTexture = (texture: THREE.Texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.flipY = false
+      texture.needsUpdate = true
+    }
+
+    prepareTexture(bedroomImportantTexture)
+    prepareTexture(bedroomMainTexture)
+    prepareTexture(bedroomMiscTexture)
+
+    return {
+      _BedroomImportant: bedroomImportantTexture,
+      _BedroomMain: bedroomMainTexture,
+      _BedroomMisc: bedroomMiscTexture,
+    }
+  }, [bedroomImportantTexture, bedroomMainTexture, bedroomMiscTexture])
+
+  useMemo(() => {
+    scene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+
+      const matchingTagEntry = Object.entries(texturesByTag).find(([tag]) => child.name.includes(tag))
+      if (!matchingTagEntry) return
+
+      const [, texture] = matchingTagEntry
+      child.material = new THREE.MeshStandardMaterial({ map: texture })
+      child.castShadow = true
+      child.receiveShadow = true
+    })
+  }, [scene, texturesByTag])
+
+  return <primitive object={scene} />
 }
 
 function AnimatedModel({
@@ -217,6 +245,9 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
   const hasProjectZoomFocus = useRef(false)
   const lockedLookAtTarget = useRef(new THREE.Vector3())
   const hoveredProjectIdRef = useRef<ProjectId | null>(null)
+  const isWaitingForCursorReactivation = useRef(false)
+  const isInSlowReactivationPan = useRef(false)
+  const reactivationInitialOffset = useRef({ x: 0, y: 0 })
   const focusAnimationState = useRef({
     isActive: false,
     progress: 0,
@@ -276,8 +307,6 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
-      if (isProjectCameraLocked) return
-
       const viewportWidth = Math.max(window.innerWidth, 1)
       const horizontalRatio = event.clientX / viewportWidth
       if (
@@ -286,6 +315,8 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
       ) {
         return
       }
+
+      if (isProjectCameraLocked) return
 
       const x = (event.clientX / viewportWidth) * 2 - 1
       const y = -(event.clientY / window.innerHeight) * 2 + 1
@@ -297,10 +328,26 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
         // Calculate cursor-based offsets
         const offsetX = x * 0.5 // -0.5 to +0.5 meters range
         const offsetY = Math.max(-0.5, Math.min(0.1, y * 0.5)) // -0.5 to +0.2 meters range
-        
+        const nextOffset = { x: offsetX, y: -offsetY }
+
+        if (isWaitingForCursorReactivation.current) {
+          // First valid cursor reactivation: start with slower camera catch-up.
+          isWaitingForCursorReactivation.current = false
+          isInSlowReactivationPan.current = true
+          reactivationInitialOffset.current = nextOffset
+        } else if (isInSlowReactivationPan.current) {
+          // If cursor moves again before catch-up, immediately restore normal speed.
+          const movedDuringSlowPan =
+            Math.abs(nextOffset.x - reactivationInitialOffset.current.x) > 0.01 ||
+            Math.abs(nextOffset.y - reactivationInitialOffset.current.y) > 0.01
+          if (movedDuringSlowPan) {
+            isInSlowReactivationPan.current = false
+          }
+        }
+
         // Update cursor offsets
-        cursorOffsets.current.x = offsetX
-        cursorOffsets.current.y = -offsetY
+        cursorOffsets.current.x = nextOffset.x
+        cursorOffsets.current.y = nextOffset.y
       }
     }
 
@@ -350,6 +397,8 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
   useEffect(() => {
     if (isProjectCameraLocked || !hasProjectZoomFocus.current) return
 
+    isWaitingForCursorReactivation.current = true
+    isInSlowReactivationPan.current = false
     focusAnimationState.current = {
       isActive: true,
       progress: 0,
@@ -417,11 +466,23 @@ function CameraController({ projectFocusTarget, isProjectCameraLocked, initialCa
       )
     }
 
-    if (!isProjectCameraLocked && !focusAnimationState.current.isActive) {
+    if (
+      !isProjectCameraLocked &&
+      !focusAnimationState.current.isActive &&
+      !isWaitingForCursorReactivation.current
+    ) {
       // Smooth interpolation towards target cursor offsets
-      const lerpFactor = 0.05 // Adjust for smoother/faster movement
+      const lerpFactor = isInSlowReactivationPan.current ? 0.015 : 0.05
       smoothOffsets.current.x += (cursorOffsets.current.x - smoothOffsets.current.x) * lerpFactor
       smoothOffsets.current.y += (cursorOffsets.current.y - smoothOffsets.current.y) * lerpFactor
+      if (isInSlowReactivationPan.current) {
+        const reachedCursorTarget =
+          Math.abs(cursorOffsets.current.x - smoothOffsets.current.x) < 0.003 &&
+          Math.abs(cursorOffsets.current.y - smoothOffsets.current.y) < 0.003
+        if (reachedCursorTarget) {
+          isInSlowReactivationPan.current = false
+        }
+      }
       
       // Calculate azimuth (horizontal) and elevation (vertical) angles from smooth offsets
       const azimuth = -smoothOffsets.current.x * Math.PI // Negate for correct direction
@@ -494,9 +555,26 @@ function TestRoomCanvas({
   onRoomLoadProgress,
 }: TestRoomCanvasProps) {
   const isBedroomView = hudMode === 'LAB' || hudMode === 'BEDROOM'
+  const workshopModelPath = `${import.meta.env.BASE_URL}models/Workshop-v1.glb`
   const modelPath = `${import.meta.env.BASE_URL}models/${isBedroomView ? 'Bedroom-v1.glb' : 'Workshop-v1.glb'}`
   const bedroomModelPath = `${import.meta.env.BASE_URL}models/Bedroom-v1.glb`
-  const modelVariant: ModelVariant = isBedroomView ? 'BEDROOM' : 'WORKSHOP'
+  const workshopTexturePaths = useMemo(
+    () => [
+      `${import.meta.env.BASE_URL}Textures/Bike.webp`,
+      `${import.meta.env.BASE_URL}Textures/Misc.webp`,
+      `${import.meta.env.BASE_URL}Textures/Projects.webp`,
+      `${import.meta.env.BASE_URL}Textures/Room.webp`,
+    ],
+    []
+  )
+  const bedroomTexturePaths = useMemo(
+    () => [
+      `${import.meta.env.BASE_URL}Textures/BedroomImportant.webp`,
+      `${import.meta.env.BASE_URL}Textures/BedroomMain.webp`,
+      `${import.meta.env.BASE_URL}Textures/BedroomMisc.webp`,
+    ],
+    []
+  )
   const cameraPosition: [number, number, number] = isBedroomView ? [1.5, 3, -2] : [1.5, 4.5, -1]
   const hexapodPath = `${import.meta.env.BASE_URL}models/hexapod.glb`
   const quadrupedPath = `${import.meta.env.BASE_URL}models/leg.glb`
@@ -508,10 +586,28 @@ function TestRoomCanvas({
   const { active, progress } = useProgress()
 
   useEffect(() => {
-    if (isBedroomView) return
-    // Warm the bedroom GLTF cache while workshop is active.
-    useGLTF.preload(bedroomModelPath)
-  }, [isBedroomView, bedroomModelPath])
+    // Aggressively clear inactive-room caches to prioritize memory usage.
+    if (isBedroomView) {
+      useGLTF.clear(workshopModelPath)
+      useGLTF.clear(hexapodPath)
+      useGLTF.clear(quadrupedPath)
+      useGLTF.clear(vballPath)
+      workshopTexturePaths.forEach((path) => useTexture.clear(path))
+      return
+    }
+
+    useGLTF.clear(bedroomModelPath)
+    bedroomTexturePaths.forEach((path) => useTexture.clear(path))
+  }, [
+    isBedroomView,
+    workshopModelPath,
+    bedroomModelPath,
+    hexapodPath,
+    quadrupedPath,
+    vballPath,
+    workshopTexturePaths,
+    bedroomTexturePaths,
+  ])
 
   useEffect(() => {
     if (!projectFocusTarget) return
@@ -581,15 +677,16 @@ function TestRoomCanvas({
         />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
-          <Model modelPath={modelPath} variant={modelVariant} />
           {!isBedroomView && (
+            <>
+            <WorkshopModel modelPath={workshopModelPath} />
             <AnimatedModel modelPath={hexapodPath} playNonce={hexapodPlayNonce} projectId="hexapod" />
-          )}
-          {!isBedroomView && (
             <AnimatedModel modelPath={quadrupedPath} playNonce={quadrupedPlayNonce} projectId="quadruped" />
-          )}
-          {!isBedroomView && (
             <AnimatedModel modelPath={vballPath} playNonce={vballPlayNonce} projectId="serving-machine" />
+            </>
+          )}
+          {isBedroomView && (
+            <BedroomModel modelPath={bedroomModelPath} />
           )}
         </Suspense>
         

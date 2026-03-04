@@ -545,6 +545,8 @@ interface TestRoomCanvasProps {
   isProjectCameraLocked: boolean
   onRoomReady?: () => void
   onRoomLoadProgress?: (progress: number) => void
+  shouldPreloadWorkshop?: boolean
+  shouldPreloadBedroom?: boolean
 }
 
 function TestRoomCanvas({
@@ -553,6 +555,8 @@ function TestRoomCanvas({
   isProjectCameraLocked,
   onRoomReady,
   onRoomLoadProgress,
+  shouldPreloadWorkshop = false,
+  shouldPreloadBedroom = false,
 }: TestRoomCanvasProps) {
   const isBedroomView = hudMode === 'LAB' || hudMode === 'BEDROOM'
   const workshopModelPath = `${import.meta.env.BASE_URL}models/Workshop-v1.glb`
@@ -588,18 +592,24 @@ function TestRoomCanvas({
   useEffect(() => {
     // Aggressively clear inactive-room caches to prioritize memory usage.
     if (isBedroomView) {
-      useGLTF.clear(workshopModelPath)
-      useGLTF.clear(hexapodPath)
-      useGLTF.clear(quadrupedPath)
-      useGLTF.clear(vballPath)
-      workshopTexturePaths.forEach((path) => useTexture.clear(path))
+      if (!shouldPreloadWorkshop) {
+        useGLTF.clear(workshopModelPath)
+        useGLTF.clear(hexapodPath)
+        useGLTF.clear(quadrupedPath)
+        useGLTF.clear(vballPath)
+        workshopTexturePaths.forEach((path) => useTexture.clear(path))
+      }
       return
     }
 
-    useGLTF.clear(bedroomModelPath)
-    bedroomTexturePaths.forEach((path) => useTexture.clear(path))
+    if (!shouldPreloadBedroom) {
+      useGLTF.clear(bedroomModelPath)
+      bedroomTexturePaths.forEach((path) => useTexture.clear(path))
+    }
   }, [
     isBedroomView,
+    shouldPreloadWorkshop,
+    shouldPreloadBedroom,
     workshopModelPath,
     bedroomModelPath,
     hexapodPath,
@@ -608,6 +618,31 @@ function TestRoomCanvas({
     workshopTexturePaths,
     bedroomTexturePaths,
   ])
+
+  useEffect(() => {
+    if (!shouldPreloadWorkshop || !isBedroomView) return
+
+    useGLTF.preload(workshopModelPath)
+    useGLTF.preload(hexapodPath)
+    useGLTF.preload(quadrupedPath)
+    useGLTF.preload(vballPath)
+    workshopTexturePaths.forEach((path) => useTexture.preload(path))
+  }, [
+    shouldPreloadWorkshop,
+    isBedroomView,
+    workshopModelPath,
+    hexapodPath,
+    quadrupedPath,
+    vballPath,
+    workshopTexturePaths,
+  ])
+
+  useEffect(() => {
+    if (!shouldPreloadBedroom || isBedroomView) return
+
+    useGLTF.preload(bedroomModelPath)
+    bedroomTexturePaths.forEach((path) => useTexture.preload(path))
+  }, [shouldPreloadBedroom, isBedroomView, bedroomModelPath, bedroomTexturePaths])
 
   useEffect(() => {
     if (!projectFocusTarget) return

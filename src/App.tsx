@@ -119,6 +119,16 @@ function App() {
         isProjectCameraLocked={isProjectCameraLocked}
         onRoomReady={handleRoomReady}
         onRoomLoadProgress={handleRoomLoadProgress}
+        shouldPreloadWorkshop={
+          isBedroomMode(hudMode) &&
+          !isRoomTransitionLoading &&
+          !isInitialOverlayVisible
+        }
+        shouldPreloadBedroom={
+          !isBedroomMode(hudMode) &&
+          !isRoomTransitionLoading &&
+          !isInitialOverlayVisible
+        }
       />
       {isInitialSceneReady && (
         <Suspense fallback={null}>

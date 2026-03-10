@@ -4,7 +4,7 @@ export default function Overview() {
   return (
     <div className="hudProjectPanel__contentBody">
       <p className="hudProjectPanel__contentText">
-        I'm Alan Yu, a first year Bachelor of Science inElectrical Engineering student at the University of Michigan. I'm interested in full-stack robotics and embedded systems. 
+        I'm Alan Yu, a first year Bachelor of Science in Electrical Engineering student at the University of Michigan. I'm interested in full-stack robotics and embedded systems. 
       </p>
       <p className="hudProjectPanel__contentText">
         That's me in the photo to the left with my parents and my dog!
